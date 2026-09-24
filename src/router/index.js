@@ -83,6 +83,11 @@ const routes = [
         name: 'dashboard-sante',
         component: () => import('../features/health/views/HealthView.vue'),
       },
+      {
+        path: 'nutrition',
+        name: 'dashboard-nutrition',
+        component: () => import('../features/nutrition/views/NutritionView.vue'),
+      },
     ],
   },
 ];

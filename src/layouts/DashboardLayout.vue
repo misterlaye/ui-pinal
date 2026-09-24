@@ -8,6 +8,7 @@ const navItems = [
   { label: 'Troupeau', route: '/dashboard/troupeau' },
   { label: 'Production', route: '/dashboard/production' },
   { label: 'Santé', route: '/dashboard/sante' },
+  { label: 'Nutrition', route: '/dashboard/nutrition' },
 ];
 
 const mobileMenuOpen = ref(false);
