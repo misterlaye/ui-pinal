@@ -5,6 +5,7 @@ import { PhBell, PhCaretDown, PhCalendarBlank, PhList, PhX } from '@phosphor-ico
 
 const navItems = [
   { label: 'Dashboard', route: '/dashboard' },
+  { label: 'Troupeau', route: '/dashboard/troupeau' },
 ];
 
 const mobileMenuOpen = ref(false);
