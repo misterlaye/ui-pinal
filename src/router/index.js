@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 const OnboardingLayout = () => import('../layouts/OnboardingLayout.vue');
+const DashboardLayout = () => import('../layouts/DashboardLayout.vue');
 
 const routes = [
   {
@@ -50,6 +51,17 @@ const routes = [
         name: 'onboarding-success',
         component: () => import('../features/identity/views/SuccessView.vue'),
         meta: { step: 6 },
+      },
+    ],
+  },
+  {
+    path: '/dashboard',
+    component: DashboardLayout,
+    children: [
+      {
+        path: '',
+        name: 'dashboard',
+        component: () => import('../features/dashboard/views/DashboardView.vue'),
       },
     ],
   },
