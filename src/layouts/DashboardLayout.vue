@@ -7,6 +7,7 @@ const navItems = [
   { label: 'Dashboard', route: '/dashboard' },
   { label: 'Troupeau', route: '/dashboard/troupeau' },
   { label: 'Production', route: '/dashboard/production' },
+  { label: 'Santé', route: '/dashboard/sante' },
 ];
 
 const mobileMenuOpen = ref(false);
