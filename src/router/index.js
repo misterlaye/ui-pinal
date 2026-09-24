@@ -78,6 +78,11 @@ const routes = [
         name: 'dashboard-production',
         component: () => import('../features/production/views/ProductionView.vue'),
       },
+      {
+        path: 'sante',
+        name: 'dashboard-sante',
+        component: () => import('../features/health/views/HealthView.vue'),
+      },
     ],
   },
 ];
