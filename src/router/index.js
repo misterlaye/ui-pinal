@@ -88,6 +88,11 @@ const routes = [
         name: 'dashboard-nutrition',
         component: () => import('../features/nutrition/views/NutritionView.vue'),
       },
+      {
+        path: 'finances',
+        name: 'dashboard-finances',
+        component: () => import('../features/finance/views/FinanceView.vue'),
+      },
     ],
   },
 ];
