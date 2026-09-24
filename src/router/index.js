@@ -73,6 +73,11 @@ const routes = [
         name: 'dashboard-animal-detail',
         component: () => import('../features/herd/views/AnimalDetailView.vue'),
       },
+      {
+        path: 'production',
+        name: 'dashboard-production',
+        component: () => import('../features/production/views/ProductionView.vue'),
+      },
     ],
   },
 ];
