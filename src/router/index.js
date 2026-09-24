@@ -63,6 +63,16 @@ const routes = [
         name: 'dashboard',
         component: () => import('../features/dashboard/views/DashboardView.vue'),
       },
+      {
+        path: 'troupeau',
+        name: 'dashboard-troupeau',
+        component: () => import('../features/herd/views/TroupeauView.vue'),
+      },
+      {
+        path: 'troupeau/:id',
+        name: 'dashboard-animal-detail',
+        component: () => import('../features/herd/views/AnimalDetailView.vue'),
+      },
     ],
   },
 ];
