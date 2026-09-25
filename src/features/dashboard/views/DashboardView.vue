@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import ProductionChart from '../components/ProductionChart.vue';
 import {
   PhWarningCircle,
@@ -12,109 +12,79 @@ import {
   PhChartLineUp,
   PhCurrencyCircleDollar,
 } from '@phosphor-icons/vue';
+import { getDashboardSummary, getDashboardAnomalies } from '../../../services/dashboard_service.js';
 
-// --- Mock data ---
+
 const userName = ref(localStorage.getItem('user_prenom') || 'M. Diallo');
 const exploitationName = ref(localStorage.getItem('exploitation_name') || 'Mon exploitation');
 
-const alerts = ref([
-  {
-    id: 1,
-    severity: 'critical',
-    title: 'Chute de production suspecte — Penda',
-    tag: 'SANTÉ',
-    tagColor: 'red',
-    description:
-      'Production en baisse brutale de 32% sur les 3 derniers jours. Risques détectés : début de mammite clinique ou stress thermique sévère. Isolement conseillé.',
-    time: 'Il y a 2h',
-    animalName: 'Penda',
-  },
-  {
-    id: 2,
-    severity: 'warning',
-    title: 'Absence de traite — Sira',
-    tag: 'PRODUCTION',
-    tagColor: 'yellow',
-    description:
-      'Sira ne s\'est pas présentée au couloir de traite ce matin. Anomalie de comportement ou boiterie potentielle dans l\'enclos de stabulation.',
-    time: 'Il y a 4h',
-    animalName: 'Sira',
-  },
-  {
-    id: 3,
-    severity: 'info',
-    title: 'Retard d\'insémination détecté',
-    tag: 'TROUPEAU',
-    tagColor: 'orange',
-    description:
-      'Cycle de chaleur estimé dépassé de 48h pour Coumba. Planification d\'une visite vétérinaire recommandée pour optimiser la lactation future.',
-    time: 'Hier',
-    animalName: 'Coumba',
-  },
-]);
+const alerts = ref([]);
+const summary = ref(null);
+const isLoading = ref(true);
+const error = ref(null);
 
-const productionTotal = ref(847);
-const productionChange = ref('+5.2%');
+const productionTotal = computed(() => summary.value?.production?.kgDerniers7Jours || 0);
+const productionChange = ref('+0%'); // Missing from backend, mock or calculate
 const productionLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-const productionData = [95, 110, 105, 130, 125, 140, 142];
+const productionData = [95, 110, 105, 130, 125, 140, 142]; // No daily breakdown in backend summary
 
 const topAnimals = ref([
   { rank: 1, name: 'Awa', race: 'Montbéliarde', litres: 18.5, trend: 'up' },
   { rank: 2, name: 'Nafi', race: 'Montbéliarde', litres: 16.2, trend: 'up' },
   { rank: 3, name: 'Diara', race: 'Gudali', litres: 14, trend: 'down' },
   { rank: 4, name: 'Fatou', race: 'Gudali', litres: 12.8, trend: 'up' },
-  { rank: 5, name: 'Sira', race: 'Gudali', litres: 8.5, trend: 'down', alert: true },
 ]);
 
-const kpis = ref([
-  {
-    label: 'Coût de revient moyen',
-    value: '380',
-    unit: 'FCFA / L',
-    change: '-1.2%',
-    changeDir: 'down',
-    note: 'Cible locale stable',
-  },
-  {
-    label: 'Prix moyen de vente',
-    value: '600',
-    unit: 'FCFA / L',
-    change: 'stable',
-    changeDir: 'stable',
-    note: 'Marché de Thiès',
-  },
-  {
-    label: 'Marge brute unitaire',
-    value: '220',
-    unit: 'FCFA / L',
-    change: '+4.5%',
-    changeDir: 'up',
-    note: 'Optimisée par l\'IA',
-  },
-  {
-    label: 'Coût alimentaire période',
-    value: '285 000',
-    unit: 'FCFA',
-    change: '+2.1%',
-    changeDir: 'up',
-    note: '7 derniers jours',
-  },
-  {
-    label: 'CA estimé de la période',
-    value: '508 200',
-    unit: 'FCFA',
-    change: '+5.2%',
-    changeDir: 'up',
-    note: '7 derniers jours',
-  },
-]);
+const kpis = computed(() => {
+  if (!summary.value) return [];
+  const fin = summary.value.finance;
+  return [
+    { label: 'Coût de revient moyen', value: fin?.coutMoyenRationParJour || '0', unit: 'FCFA / j', change: 'stable', changeDir: 'stable', note: 'Coût ration' },
+    { label: 'Prix moyen de vente', value: fin?.prixMoyenLaitParKg || '0', unit: 'FCFA / Kg', change: 'stable', changeDir: 'stable', note: 'Moyen' },
+    { label: 'CA estimé (30 jours)', value: fin?.chiffreAffairesEstimeLait30Jours || '0', unit: 'FCFA', change: 'stable', changeDir: 'stable', note: 'Estimé' },
+    { label: 'Marge estimée (30 jours)', value: fin?.margeEstimeeSurCoutAlimentaire30Jours || '0', unit: 'FCFA', change: 'stable', changeDir: 'stable', note: 'Estimée' },
+  ];
+});
 
-const herd = ref({
-  total: 12,
-  enLactation: 9,
-  taries: 3,
-  pctLactation: 75,
-  pctTaries: 25,
+const herd = computed(() => {
+  if (!summary.value) return { total: 0, enLactation: 0, taries: 0, pctLactation: 0, pctTaries: 0 };
+  const t = summary.value.troupeau;
+  const total = t.totalAnimaux || 1; // Prevent div by 0
+  return {
+    total: t.totalAnimaux,
+    enLactation: t.vachesEnLactation,
+    taries: t.vachesTaries,
+    pctLactation: Math.round((t.vachesEnLactation / total) * 100),
+    pctTaries: Math.round((t.vachesTaries / total) * 100),
+  };
+});
+
+onMounted(async () => {
+  try {
+    isLoading.value = true;
+    const [summaryData, anomaliesData] = await Promise.all([
+      getDashboardSummary(),
+      getDashboardAnomalies()
+    ]);
+    summary.value = summaryData;
+    
+    alerts.value = anomaliesData.map((ano, index) => ({
+      id: index,
+      severity: ano.niveauSeverite === 'HAUTE' ? 'critical' : ano.niveauSeverite === 'MOYENNE' ? 'warning' : 'info',
+      title: `${ano.typeAnomalie} — ${ano.nomAnimal || 'Inconnu'}`,
+      tag: ano.typeAnomalie,
+      tagColor: ano.niveauSeverite === 'HAUTE' ? 'red' : 'yellow',
+      description: ano.description,
+      time: 'Récemment',
+      animalName: ano.nomAnimal || 'Inconnu'
+    }));
+
+  } catch (e) {
+    error.value = "Erreur de chargement du tableau de bord.";
+    console.error(e);
+  } finally {
+    isLoading.value = false;
+  }
 });
 
 function getAlertIconColor(severity) {
@@ -128,7 +98,7 @@ function getTagClass(color) {
 }
 
 function getAnimalInitials(name) {
-  return name.slice(0, 2).toUpperCase();
+  return name ? name.slice(0, 2).toUpperCase() : '??';
 }
 
 function getAnimalColor(rank) {

@@ -25,11 +25,14 @@ const currentStep = computed(() => route.meta?.step || 1);
             au rythme du Sahel.
           </h1>
           <p class="onboarding-left-subtitle">
-            Gérez votre exploitation laitière avec simplicité et efficacité.
+            La première plateforme intelligente de pilotage d'exploitation laitière adaptée aux réalités d'Afrique de l'Ouest. Suivez la production, surveillez la santé et optimisez vos rendements.
           </p>
         </div>
 
-        <PnStepper :current-step="currentStep" :total-steps="6" />
+        <PnStepper v-if="currentStep > 1" :current-step="currentStep" :total-steps="6" />
+        <div v-else class="onboarding-left-footer">
+          PINAL SAAS — GESTION LAITIÈRE INTÉGRÉE
+        </div>
       </div>
     </aside>
 
@@ -120,6 +123,13 @@ const currentStep = computed(() => route.meta?.step || 1);
   color: rgba(255, 255, 255, 0.75);
   line-height: 1.5;
   max-width: 380px;
+}
+
+.onboarding-left-footer {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.1em;
+  font-weight: 500;
 }
 
 /* --- Right Panel --- */

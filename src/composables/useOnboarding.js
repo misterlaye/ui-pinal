@@ -37,8 +37,13 @@ const state = reactive({
 });
 
 export function useOnboarding() {
+
   function setStep(step) {
     state.currentStep = step;
+  }
+
+  function updateData(data) {
+    Object.assign(state, data);
   }
 
   function setAuthData({ accessToken, refreshToken, userId }) {
@@ -78,6 +83,7 @@ export function useOnboarding() {
   return {
     state,
     setStep,
+    updateData,
     setAuthData,
     setExploitationData,
     reset,

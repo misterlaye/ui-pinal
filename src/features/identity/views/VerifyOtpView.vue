@@ -2,7 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useOnboarding } from '../../../composables/useOnboarding.js';
-import { verifyOtp, requestOtp, registerUser } from '../../../services/auth_service.js';
+import { verifyOtp, requestOtp, registerUser, getCurrentUser } from '../../../services/auth_service.js';
+import { getUserExploitations } from '../../../services/exploitation_service.js';
 import PnOtpInput from '../../../components/ui/PnOtpInput.vue';
 import PnButton from '../../../components/ui/PnButton.vue';
 
@@ -56,16 +57,32 @@ async function handleVerify(code) {
     const authData = await verifyOtp(state.telephone, codeValue);
     setAuthData(authData);
 
-    // Register user profile
-    await registerUser({
-      telephone: state.telephone,
-      nom: state.nom,
-      prenom: state.prenom,
-      email: state.email || null,
-    });
+    // If we have nom and prenom in state, we register them here.
+    if (state.nom && state.prenom) {
+      await registerUser({
+        telephone: state.telephone,
+        nom: state.nom,
+        prenom: state.prenom,
+        email: state.email || null,
+      });
+    }
 
-    setStep(4);
-    router.push({ name: 'onboarding-create-exploitation' });
+    // Check if the user is new and needs to set up their profile
+    const user = await getCurrentUser();
+    if (!user.nom || user.nom === 'Nom' || !user.prenom || user.prenom === 'Prénom') {
+      setStep(2);
+      router.push({ name: 'onboarding-register' });
+      return;
+    }
+
+    // Check if user has exploitations
+    const exploitations = await getUserExploitations();
+    if (exploitations && exploitations.length > 0) {
+      router.push({ name: 'select-exploitation' });
+    } else {
+      setStep(4);
+      router.push({ name: 'onboarding-create-exploitation' });
+    }
   } catch (err) {
     error.value = err.response?.data?.message || 'Code OTP invalide. Veuillez réessayer.';
   } finally {
