@@ -18,7 +18,6 @@ const apiError = ref('');
 const isValid = computed(() => {
   return state.nom.trim() &&
     state.prenom.trim() &&
-    state.telephone.trim() &&
     acceptedCGU.value;
 });
 
@@ -31,11 +30,6 @@ function validate() {
   if (!state.prenom.trim()) {
     errs.prenom = 'Le prénom est obligatoire';
   }
-  if (!state.telephone.trim()) {
-    errs.telephone = 'Le numéro de téléphone est obligatoire';
-  } else if (!/^[+]?[\d\s-]{8,20}$/.test(state.telephone.trim())) {
-    errs.telephone = 'Numéro de téléphone invalide';
-  }
   if (state.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email.trim())) {
     errs.email = 'Adresse email invalide';
   }
@@ -47,6 +41,8 @@ function validate() {
   return Object.keys(errs).length === 0;
 }
 
+import { getUserExploitations } from '../../../services/exploitation_service.js';
+
 async function handleSubmit() {
   apiError.value = '';
 
@@ -55,11 +51,22 @@ async function handleSubmit() {
   loading.value = true;
 
   try {
-    // Request OTP first
-    await requestOtp(state.telephone.trim());
+    // Register the user profile details to the backend
+    await registerUser({
+      telephone: state.telephone,
+      nom: state.nom,
+      prenom: state.prenom,
+      email: state.email || null,
+    });
 
-    setStep(3);
-    router.push({ name: 'onboarding-verify-otp' });
+    // Check if user has exploitations
+    const exploitations = await getUserExploitations();
+    if (exploitations && exploitations.length > 0) {
+      router.push({ name: 'select-exploitation' });
+    } else {
+      setStep(4);
+      router.push({ name: 'onboarding-create-exploitation' });
+    }
   } catch (err) {
     apiError.value = err.response?.data?.message || 'Une erreur est survenue. Veuillez réessayer.';
   } finally {
@@ -71,9 +78,9 @@ async function handleSubmit() {
 <template>
   <div class="register-view animate-fade-in-up">
     <div class="register-header">
-      <h2 class="register-title">Votre inscription</h2>
+      <h2 class="register-title">Finalisez votre profil</h2>
       <p class="register-subtitle">
-        Créez votre compte pour commencer à gérer votre exploitation.
+        Parlez-nous un peu de vous pour configurer votre accès personnel.
       </p>
     </div>
 
@@ -101,17 +108,6 @@ async function handleSubmit() {
       />
 
       <PnInput
-        id="register-telephone"
-        v-model="state.telephone"
-        label="Téléphone"
-        type="tel"
-        placeholder="+221 77 123 45 67"
-        :required="true"
-        :error="errors.telephone"
-        hint="Vous recevrez un code de vérification par SMS"
-      />
-
-      <PnInput
         id="register-email"
         v-model="state.email"
         label="Email"
@@ -136,7 +132,7 @@ async function handleSubmit() {
         :loading="loading"
         :disabled="!isValid"
       >
-        Vérifier mon numéro
+        Finaliser mon inscription
       </PnButton>
     </form>
   </div>

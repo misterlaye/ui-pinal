@@ -52,9 +52,8 @@ async function handleSubmit() {
   loading.value = true;
 
   try {
-    // Use a default raceId for the first animal during onboarding
-    // A proper race selection can be added later
-    const defaultRaceId = '00000000-0000-0000-0000-000000000001';
+    // Use the selected raceId or default to Holstein
+    const defaultRaceId = '10000000-0000-0000-0000-000000000001';
 
     await createAnimal({
       exploitationId: state.exploitationId,
@@ -83,9 +82,9 @@ function handleSkip() {
 <template>
   <div class="animal-view animate-fade-in-up">
     <div class="animal-header">
-      <h2 class="animal-title">Premier animal</h2>
+      <h2 class="animal-title">Configuration de base (Optionnel)</h2>
       <p class="animal-subtitle">
-        Enregistrez votre premier animal pour commencer le suivi de votre troupeau.
+        Si vous le souhaitez, enregistrez votre premier animal. Vous pourrez laisser cette tâche à votre gérant/ouvrier plus tard.
       </p>
     </div>
 
@@ -141,6 +140,17 @@ function handleSkip() {
         :error="errors.dateNaissance"
       />
 
+      <div class="custom-select-wrapper">
+        <label for="animal-race" class="custom-label">RACE</label>
+        <select id="animal-race" v-model="state.animalRaceId" class="custom-select">
+          <option value="10000000-0000-0000-0000-000000000001">Holstein</option>
+          <option value="10000000-0000-0000-0000-000000000002">Jersey</option>
+          <option value="10000000-0000-0000-0000-000000000003">Montbéliarde</option>
+          <option value="10000000-0000-0000-0000-000000000004">Locale</option>
+          <option value="10000000-0000-0000-0000-000000000005">Croisée</option>
+        </select>
+      </div>
+
       <div class="animal-actions">
         <PnButton
           type="submit"
@@ -158,7 +168,7 @@ function handleSkip() {
           class="animal-skip-btn"
           @click="handleSkip"
         >
-          Passer cette étape
+          Je laisse mon équipe s'en charger
         </button>
       </div>
     </form>
@@ -245,6 +255,43 @@ function handleSkip() {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Custom Select */
+.custom-select-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.custom-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.custom-select {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-white);
+  color: var(--text-dark);
+  transition: all var(--transition-fast);
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 16px;
+}
+
+.custom-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(200, 117, 51, 0.1);
 }
 
 /* Actions */

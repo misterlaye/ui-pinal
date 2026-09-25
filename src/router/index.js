@@ -55,6 +55,11 @@ const routes = [
     ],
   },
   {
+    path: '/select-exploitation',
+    name: 'select-exploitation',
+    component: () => import('../features/identity/views/SelectExploitationView.vue'),
+  },
+  {
     path: '/dashboard',
     component: DashboardLayout,
     children: [

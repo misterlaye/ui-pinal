@@ -1,142 +1,179 @@
 <script setup>
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useOnboarding } from '../../../composables/useOnboarding.js';
 import PnButton from '../../../components/ui/PnButton.vue';
-import { PhHandshake } from '@phosphor-icons/vue';
+import { requestOtp } from '../../../services/auth_service.js';
+import { PhLockKey } from '@phosphor-icons/vue';
 
 const router = useRouter();
-const { setStep } = useOnboarding();
+const { setStep, updateData } = useOnboarding();
+const telephone = ref('');
+const isLoading = ref(false);
+const error = ref('');
 
-function handleStart() {
-  setStep(2);
-  router.push({ name: 'onboarding-register' });
+async function handleRequestOtp() {
+  if (!telephone.value || telephone.value.length < 8) {
+    error.value = "Veuillez entrer un numéro valide";
+    return;
+  }
+  
+  isLoading.value = true;
+  error.value = '';
+  
+  try {
+    const formattedPhone = telephone.value.startsWith('+') ? telephone.value : '+221' + telephone.value.replace(/^0+/, '');
+    await requestOtp(formattedPhone);
+    updateData({ telephone: formattedPhone });
+    setStep(3); // Verify OTP step
+    router.push({ name: 'onboarding-verify-otp' });
+  } catch (err) {
+    error.value = "Erreur lors de l'envoi du code. Veuillez réessayer.";
+    console.error(err);
+  } finally {
+    isLoading.value = false;
+  }
 }
 </script>
 
 <template>
-  <div class="welcome-view animate-fade-in-up">
-    <div class="welcome-icon-wrapper">
-      <div class="welcome-icon-circle">
-        <PhHandshake :size="36" weight="duotone" color="#C87533" />
-      </div>
-    </div>
-
-    <div class="welcome-content">
-      <h2 class="welcome-title">Bienvenue sur Pinal</h2>
-      <p class="welcome-description">
-        La plateforme de gestion d'exploitation laitière pensée pour les éleveurs du Sahel.
-        Suivez votre troupeau, votre production et vos finances en toute simplicité.
+  <div class="login-view animate-fade-in-up">
+    
+    <div class="login-header">
+      <h2 class="login-title">Connexion / Inscription</h2>
+      <p class="login-subtitle">
+        Entrez votre numéro de téléphone. Nous vous enverrons un code OTP de confirmation par SMS pour un accès sécurisé.
       </p>
     </div>
 
-    <div class="welcome-features">
-      <div class="welcome-feature">
-        <span class="welcome-feature-icon">🐄</span>
-        <div>
-          <p class="welcome-feature-title">Suivi du troupeau</p>
-          <p class="welcome-feature-desc">Gérez chaque animal de votre exploitation</p>
+    <div class="login-form">
+      <div class="form-group">
+        <label for="telephone" class="form-label">NUMÉRO DE TÉLÉPHONE</label>
+        <div class="input-with-prefix">
+          <input 
+            id="telephone"
+            v-model="telephone" 
+            type="tel" 
+            class="form-input"
+            placeholder="+221 77 ..."
+            @keyup.enter="handleRequestOtp"
+          />
         </div>
+        <span v-if="error" class="error-msg">{{ error }}</span>
       </div>
-      <div class="welcome-feature">
-        <span class="welcome-feature-icon">🥛</span>
-        <div>
-          <p class="welcome-feature-title">Production laitière</p>
-          <p class="welcome-feature-desc">Enregistrez et analysez vos traites</p>
-        </div>
-      </div>
-      <div class="welcome-feature">
-        <span class="welcome-feature-icon">💰</span>
-        <div>
-          <p class="welcome-feature-title">Gestion financière</p>
-          <p class="welcome-feature-desc">Suivez vos revenus et dépenses</p>
-        </div>
+
+      <PnButton
+        variant="primary"
+        :full="true"
+        size="lg"
+        class="btn-submit"
+        :loading="isLoading"
+        @click="handleRequestOtp"
+      >
+        Recevoir le code
+      </PnButton>
+
+      <div class="secure-badge">
+        <PhLockKey :size="16" color="#6B7280" />
+        <span>Connexion sécurisée par authentification unique OTP</span>
       </div>
     </div>
-
-    <PnButton
-      variant="primary"
-      :full="true"
-      size="lg"
-      @click="handleStart"
-    >
-      Commencer
-    </PnButton>
   </div>
 </template>
 
 <style scoped>
-.welcome-view {
+.login-view {
   display: flex;
   flex-direction: column;
   gap: 32px;
+  width: 100%;
 }
 
-.welcome-icon-wrapper {
-  display: flex;
-  justify-content: center;
-}
-
-.welcome-icon-circle {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: var(--primary-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--primary-border);
-}
-
-.welcome-content {
-  text-align: center;
-}
-
-.welcome-title {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--text-dark);
-  margin-bottom: 8px;
-}
-
-.welcome-description {
-  font-size: var(--font-size-base);
-  color: var(--text-muted);
-  line-height: 1.6;
-  max-width: 380px;
-  margin: 0 auto;
-}
-
-.welcome-features {
+.login-header {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
-  background: var(--bg-white);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-}
-
-.welcome-feature {
-  display: flex;
-  align-items: flex-start;
   gap: 12px;
 }
 
-.welcome-feature-icon {
-  font-size: 24px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.welcome-feature-title {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
+.login-title {
+  font-size: 28px;
+  font-weight: 700;
   color: var(--text-dark);
-  margin-bottom: 2px;
 }
 
-.welcome-feature-desc {
-  font-size: var(--font-size-xs);
+.login-subtitle {
+  font-size: 14px;
   color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.input-with-prefix {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.form-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-white);
+  color: var(--text-dark);
+  transition: all var(--transition-fast);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(200, 117, 51, 0.1);
+}
+
+.error-msg {
+  font-size: 12px;
+  color: #EF4444;
+}
+
+.btn-submit {
+  background-color: #C87533; /* The exact color from the mockup */
+  color: white;
+  font-size: 16px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+}
+
+.btn-submit:hover {
+  background-color: #B3682E;
+}
+
+.secure-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6B7280;
 }
 </style>

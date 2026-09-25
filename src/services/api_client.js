@@ -22,3 +22,17 @@ apiClient.interceptors.request.use((config) => {
 
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Session expired or invalid token
+      localStorage.removeItem('jwt_token');
+      localStorage.removeItem('jwt_refresh_token');
+      localStorage.removeItem('active_exploitation_id');
+      window.location.href = '/onboarding/welcome';
+    }
+    return Promise.reject(error);
+  }
+);

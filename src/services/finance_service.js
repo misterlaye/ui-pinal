@@ -1,46 +1,58 @@
+import { apiClient } from './api_client.js';
+
 /**
- * Mock service for Finance module data.
- * Based on the backend RentabiliteResponse schema.
+ * Service pour le module Finances.
  */
-
 export const getFinanceDashboard = async () => {
-  await new Promise(resolve => setTimeout(resolve, 500));
+  try {
+    // 1. Fetch real latest rentability from backend
+    const { data: rentabilite } = await apiClient.get('/finance/rentabilite/latest');
+    
+    // Fetch transactions
+    const { data: transactions } = await apiClient.get('/finance/transactions');
 
+    // 2. Map real backend data to frontend expected format
+    return {
+      kpis: {
+        ca: rentabilite.chiffreAffaires,
+        caTrend: 0, // Mock
+        margin: rentabilite.marge,
+        marginTrend: 0, // Mock
+        unitCost: rentabilite.coutRevientParLitre,
+        unitCostTrend: 0, // Mock
+        rentability: rentabilite.chiffreAffaires ? (rentabilite.marge / rentabilite.chiffreAffaires) * 100 : 0,
+        rentabilityTrend: 0, // Mock
+      },
+      charts: {
+        // ENCORE MOCKÉ : Historique financier non disponible
+        revenueLabels: ['Semaine 1', 'Semaine 2', 'Semaine 3', 'Semaine 4'],
+        revenueData: [120000, 150000, 130000, 180000],
+        costData: [80000, 95000, 85000, 100000],
+      },
+      transactions: transactions,
+      rentabilityAnalysis: {
+        totalRevenue: rentabilite.chiffreAffaires,
+        totalCosts: rentabilite.coutTotal,
+        feedCosts: rentabilite.coutAlimentation,
+        healthCosts: rentabilite.autresCharges, // Assuming autres charges = health/etc.
+        otherCosts: 0,
+        netProfit: rentabilite.marge
+      }
+    };
+  } catch (error) {
+    if (error.response?.status === 404) {
+      // Pas de données de rentabilité, fallback sur des données vierges / mock initial
+      return getMockFinanceDashboard();
+    }
+    throw error;
+  }
+};
+
+const getMockFinanceDashboard = () => {
   return {
-    kpis: {
-      coutRevient: 380,
-      coutRevientTrend: -2.1,
-      prixMoyenVente: 600,
-      prixMoyenVenteTrend: 0,
-      margeBrute: 220,
-      margeBruteTrend: 5.8,
-      chiffreAffaires: 285000,
-      chiffreAffairesTrend: -4.2
-    },
-    rentability: {
-      netProfit: 223200,
-      netMarginPercentage: 43.9,
-      trend: 11.4
-    },
-    chargesRepartition: {
-      labels: ['Alimentation', 'Santé et Vétérinaire', 'Main d\'œuvre', 'Eau et Énergie', 'Autres'],
-      data: [285000, 20000, 145000, 42000, 16000],
-      colors: ['#C87533', '#EF4444', '#10B981', '#3B82F6', '#6B7280']
-    },
-    revenueVsCharges: {
-      labels: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin'],
-      revenues: [450000, 480000, 490000, 470000, 510000, 530000],
-      charges: [310000, 300000, 290000, 310000, 280000, 290000],
-      margin: [140000, 180000, 200000, 160000, 230000, 240000]
-    },
-    transactions: [
-      { id: 1, date: '18 juin 2024', desc: 'Vente Lait — Laiterie Sen Delta', category: 'Vente de lait', type: 'REVENU', amount: 84500 },
-      { id: 2, date: '15 juin 2024', desc: 'Livraison Foin + Son de blé', category: 'Alimentation', type: 'CHARGE', amount: -145000 },
-      { id: 3, date: '12 juin 2024', desc: 'Vente Lait — Marché local Thiès', category: 'Vente de lait', type: 'REVENU', amount: 56200 },
-      { id: 4, date: '10 juin 2024', desc: 'Visite vétérinaire — Dr. Sarr', category: 'Santé vétérinaire', type: 'CHARGE', amount: -32000 },
-      { id: 5, date: '8 juin 2024', desc: 'Livraison Tourteau d\'arachide', category: 'Alimentation', type: 'CHARGE', amount: -98500 },
-      { id: 6, date: '5 juin 2024', desc: 'Salaires personnel de ferme', category: 'Main d\'œuvre', type: 'CHARGE', amount: -72500 },
-      { id: 7, date: '2 juin 2024', desc: 'Vente Lait — Laiterie Sen Delta', category: 'Vente de lait', type: 'REVENU', amount: 89700 }
-    ]
+    kpis: { ca: 0, caTrend: 0, margin: 0, marginTrend: 0, unitCost: 0, unitCostTrend: 0, rentability: 0, rentabilityTrend: 0 },
+    charts: { revenueLabels: [], revenueData: [], costData: [] },
+    transactions: [],
+    rentabilityAnalysis: { totalRevenue: 0, totalCosts: 0, feedCosts: 0, healthCosts: 0, otherCosts: 0, netProfit: 0 }
   };
 };
