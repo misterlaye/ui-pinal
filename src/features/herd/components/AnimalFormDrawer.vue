@@ -1,8 +1,9 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import PnDrawer from '../../../components/ui/PnDrawer.vue';
 import PnInput from '../../../components/ui/PnInput.vue';
 import PnButton from '../../../components/ui/PnButton.vue';
+import { getActiveRaces } from '../../../services/race_service.js';
 
 const props = defineProps({
   isOpen: {
@@ -20,15 +21,42 @@ const emit = defineEmits(['update:isOpen', 'save']);
 const form = ref({
   identifiant: '',
   name: '',
-  race: 'Montbéliarde',
-  status: 'lactation',
-  age: '', // Simple text field for age/dob for now
+  raceId: '',
+  status: 'ACTIF',
+  dateNaissance: '',
+  mereId: '',
+  pereIdentifiant: '',
 });
 
 const errors = ref({});
 const isSaving = ref(false);
+const races = ref([]);
+const females = ref([]);
 
 const title = ref('Ajouter un animal');
+
+onMounted(async () => {
+  try {
+    races.value = await getActiveRaces();
+    if (races.value.length > 0) {
+      form.value.raceId = races.value[0].id;
+    }
+  } catch (err) {
+    console.error("Failed to fetch races", err);
+  }
+  try {
+    const exploitationId = localStorage.getItem('active_exploitation_id');
+    if (exploitationId) {
+        // Fetch females for "Mère" combo box (we load all animals for now)
+        const { getAnimalsList } = await import('../../../services/animal_service.js');
+        const animals = await getAnimalsList(exploitationId);
+        // Exclude the current animal if we're editing
+        females.value = animals.filter(a => a.id !== props.animal?.id);
+    }
+  } catch (err) {
+    console.error("Failed to fetch females", err);
+  }
+});
 
 watch(
   () => props.isOpen,
@@ -39,18 +67,22 @@ watch(
         form.value = {
           identifiant: props.animal.identifiant || '',
           name: props.animal.name || '',
-          race: props.animal.race || 'Montbéliarde',
-          status: props.animal.status || 'lactation',
-          age: props.animal.age || '',
+          raceId: props.animal.raceId || (races.value.length > 0 ? races.value[0].id : ''),
+          status: props.animal.status || 'ACTIF',
+          dateNaissance: props.animal.dateNaissance || '',
+          mereId: props.animal.mereId || '',
+          pereIdentifiant: props.animal.pereIdentifiant || '',
         };
       } else {
         title.value = 'Ajouter un animal';
         form.value = {
           identifiant: '',
           name: '',
-          race: 'Montbéliarde',
-          status: 'lactation',
-          age: '',
+          raceId: races.value.length > 0 ? races.value[0].id : '',
+          status: 'ACTIF',
+          dateNaissance: '',
+          mereId: '',
+          pereIdentifiant: '',
         };
       }
       errors.value = {};
@@ -117,11 +149,10 @@ const handleSave = async () => {
         <div class="form-group flex-1">
           <label class="pn-label">Race</label>
           <div class="select-wrapper">
-            <select v-model="form.race" class="pn-select">
-              <option value="Montbéliarde">Montbéliarde</option>
-              <option value="Gudali">Gudali</option>
-              <option value="Holstein">Holstein</option>
-              <option value="Métisse">Métisse</option>
+            <select v-model="form.raceId" class="pn-select">
+              <option v-for="race in races" :key="race.id" :value="race.id">
+                {{ race.libelle }}
+              </option>
             </select>
           </div>
         </div>
@@ -130,22 +161,45 @@ const handleSave = async () => {
           <label class="pn-label">Statut actuel</label>
           <div class="select-wrapper">
             <select v-model="form.status" class="pn-select">
-              <option value="lactation">En Lactation</option>
-              <option value="tarie">Tarie</option>
-              <option value="alerte_sante">Alerte Santé</option>
-              <option value="alerte_production">Alerte Production</option>
+              <option value="ACTIF">Actif</option>
+              <option value="VENDU">Vendu</option>
+              <option value="DECEDE">Décédé</option>
             </select>
           </div>
         </div>
       </div>
 
       <div class="form-group">
-        <PnInput
-          id="age"
-          label="Âge ou Date de naissance"
-          v-model="form.age"
-          placeholder="Ex: 3 ans ou 12/05/2021"
+        <label class="pn-label">Date de naissance</label>
+        <input
+          type="date"
+          id="dateNaissance"
+          v-model="form.dateNaissance"
+          class="pn-select"
         />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label class="pn-label">Mère (Vache de l'exploitation)</label>
+          <div class="select-wrapper">
+            <select v-model="form.mereId" class="pn-select">
+              <option value="">-- Inconnue --</option>
+              <option v-for="cow in females" :key="cow.id" :value="cow.id">
+                {{ cow.identifiant }} - {{ cow.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group flex-1">
+          <PnInput
+            id="pereIdentifiant"
+            label="Identifiant du Père"
+            v-model="form.pereIdentifiant"
+            placeholder="Ex: Taureau IA"
+          />
+        </div>
       </div>
     </form>
 

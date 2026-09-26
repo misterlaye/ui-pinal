@@ -6,21 +6,37 @@ import AnimalFormDrawer from '../components/AnimalFormDrawer.vue';
 import PnModal from '../../../components/ui/PnModal.vue';
 import PnButton from '../../../components/ui/PnButton.vue';
 import { getAnimalsList, createAnimal, updateAnimal, deleteAnimal } from '../../../services/animal_service.js';
-import { 
-  PhPlus, 
-  PhMagnifyingGlass, 
-  PhCaretDown, 
+import {
+  PhPlus,
+  PhMagnifyingGlass,
+  PhCaretDown,
   PhChartPieSlice,
   PhWarningCircle
 } from '@phosphor-icons/vue';
 
+import { useExploitation } from '../../../composables/useExploitation.js';
+import { getActiveRaces } from '../../../services/race_service.js';
+
 // Simulate loading state for UX
 const isLoading = ref(true);
 const animals = ref([]);
+const { getActiveExploitation } = useExploitation();
 
 onMounted(async () => {
   try {
-    animals.value = await getAnimalsList('demo-exploitation-id');
+    const expId = getActiveExploitation();
+    if (expId) {
+      const fetchedRaces = await getActiveRaces();
+      const fetchedAnimals = await getAnimalsList(expId);
+
+      animals.value = fetchedAnimals.map(animal => {
+        const race = fetchedRaces.find(r => r.id === animal.raceId);
+        return {
+          ...animal,
+          race: race ? race.libelle : 'Inconnue'
+        };
+      });
+    }
   } catch (err) {
     console.error("Failed to load animals", err);
   } finally {
@@ -48,15 +64,23 @@ const openEditDrawer = (animal) => {
 
 const handleSaveAnimal = async (animalData) => {
   try {
+    let savedAnimal;
     if (selectedAnimal.value) {
-      // Update
-      const updated = await updateAnimal(selectedAnimal.value.id, animalData);
-      const idx = animals.value.findIndex(a => a.id === updated.id);
-      if (idx !== -1) animals.value[idx] = updated;
+      savedAnimal = await updateAnimal(selectedAnimal.value.id, animalData);
     } else {
-      // Create
-      const created = await createAnimal(animalData);
-      animals.value.unshift(created);
+      savedAnimal = await createAnimal(animalData);
+    }
+
+    // Map race for UI
+    const races = await getActiveRaces();
+    const race = races.find(r => r.id === savedAnimal.raceId);
+    savedAnimal.race = race ? race.libelle : 'Inconnue';
+
+    if (selectedAnimal.value) {
+      const idx = animals.value.findIndex(a => a.id === savedAnimal.id);
+      if (idx !== -1) animals.value[idx] = savedAnimal;
+    } else {
+      animals.value.unshift(savedAnimal);
     }
     isDrawerOpen.value = false;
   } catch (err) {
@@ -85,31 +109,62 @@ const handleDelete = async () => {
 };
 
 // Chart Data
-const raceData = {
-  labels: ['Gudali', 'Montbéliarde'],
-  datasets: [{
-    data: [6, 6],
-    backgroundColor: ['#475F51', '#C87533'],
-    borderWidth: 0,
-    hoverOffset: 4
-  }]
-};
+import { computed } from 'vue';
 
-const statusData = {
-  labels: ['Lactation', 'Tarie', 'Alerte'],
-  datasets: [{
-    data: [7, 3, 2],
-    backgroundColor: ['#475F51', '#C87533', '#B45309'],
-    borderWidth: 0,
-    hoverOffset: 4
-  }]
-};
+const raceData = computed(() => {
+  const counts = {};
+  animals.value.forEach(a => {
+    counts[a.race] = (counts[a.race] || 0) + 1;
+  });
+  return {
+    labels: Object.keys(counts),
+    datasets: [{
+      data: Object.values(counts),
+      backgroundColor: ['#475F51', '#C87533', '#B45309', '#16A34A', '#EF4444'],
+      borderWidth: 0,
+      hoverOffset: 4
+    }]
+  };
+});
+
+const statusData = computed(() => {
+  const counts = { 'Actif': 0, 'Vendu': 0, 'Décédé': 0 };
+  animals.value.forEach(a => {
+    if (a.status === 'ACTIF') counts['Actif']++;
+    else if (a.status === 'VENDU') counts['Vendu']++;
+    else if (a.status === 'DECEDE') counts['Décédé']++;
+  });
+  return {
+    labels: Object.keys(counts),
+    datasets: [{
+      data: Object.values(counts),
+      backgroundColor: ['#475F51', '#C87533', '#B45309'],
+      borderWidth: 0,
+      hoverOffset: 4
+    }]
+  };
+});
+
+const totalAnimaux = computed(() => animals.value.length);
+const actifsCount = computed(() => animals.value.filter(a => a.status === 'ACTIF').length);
+const vendusCount = computed(() => animals.value.filter(a => a.status === 'VENDU').length);
+const decedesCount = computed(() => animals.value.filter(a => a.status === 'DECEDE').length);
 
 const searchQuery = ref('');
 const filterLactation = ref(false);
 const filterTarie = ref(false);
 const filterAlerte = ref(false);
 
+const filteredAnimals = computed(() => {
+  return animals.value.filter(a => {
+    if (searchQuery.value && !a.name.toLowerCase().includes(searchQuery.value.toLowerCase())) {
+      return false;
+    }
+    // Simplistic filter since we don't have lactation/tarie in animal object directly yet
+    if (filterLactation.value && a.status !== 'ACTIF') return false;
+    return true;
+  });
+});
 </script>
 
 <template>
@@ -118,7 +173,7 @@ const filterAlerte = ref(false);
     <div class="page-header">
       <div class="header-content">
         <h1 class="page-title">Mon Troupeau</h1>
-        <p class="page-subtitle">12 animaux enregistrés • 9 en lactation • 3 taries</p>
+        <p class="page-subtitle">{{ totalAnimaux }} animaux enregistrés • {{ actifsCount }} actifs</p>
       </div>
       <button class="btn-primary" @click="openCreateDrawer">
         <PhPlus :size="16" weight="bold" />
@@ -168,15 +223,15 @@ const filterAlerte = ref(false);
 
     <!-- Grid -->
     <div class="grid-container" v-if="!isLoading">
-      <AnimalCard 
-        v-for="animal in animals" 
-        :key="animal.id" 
-        :animal="animal.isWarning ? { ...animal, status: 'alerte_production' } : animal" 
+      <AnimalCard
+        v-for="animal in filteredAnimals"
+        :key="animal.id"
+        :animal="animal"
         @edit="openEditDrawer"
         @delete="confirmDelete"
       />
     </div>
-    
+
     <!-- Skeleton Loading -->
     <div class="grid-container" v-else>
       <div v-for="i in 12" :key="i" class="skeleton-card">
@@ -197,42 +252,42 @@ const filterAlerte = ref(false);
 
     <!-- Stats Section -->
     <div class="stats-section">
-      <DonutChart title="Répartition par race" :icon="PhChartPieSlice" :data="raceData" centerText1="12" centerText2="animaux" />
-      <DonutChart title="Répartition par statut" :icon="PhChartPieSlice" :data="statusData" centerText1="12" centerText2="animaux" />
-      
+      <DonutChart title="Répartition par race" :icon="PhChartPieSlice" :data="raceData" :centerText1="totalAnimaux.toString()" centerText2="animaux" />
+      <DonutChart title="Répartition par statut" :icon="PhChartPieSlice" :data="statusData" :centerText1="totalAnimaux.toString()" centerText2="animaux" />
+
       <!-- Summary Card -->
       <div class="summary-card">
         <h3 class="summary-title">Résumé rapide</h3>
         <div class="summary-list">
           <div class="summary-item">
             <div class="item-label">
-              <span class="dot dot-green"></span> En lactation
+              <span class="dot dot-green"></span> Actifs
             </div>
-            <span class="item-value">7</span>
+            <span class="item-value">{{ actifsCount }}</span>
           </div>
           <div class="summary-item">
             <div class="item-label">
-              <span class="dot dot-orange"></span> Taries
+              <span class="dot dot-orange"></span> Vendus
             </div>
-            <span class="item-value">3</span>
+            <span class="item-value">{{ vendusCount }}</span>
           </div>
           <div class="summary-item pb-4 border-b">
             <div class="item-label">
-              <span class="dot dot-red"></span> Alertes actives
+              <span class="dot dot-red"></span> Décédés
             </div>
-            <span class="item-value">2</span>
+            <span class="item-value">{{ decedesCount }}</span>
           </div>
           <div class="summary-item pt-4 total-row">
-            <span class="item-label-text">Production totale/jour</span>
-            <span class="item-value">128.6 L</span>
+            <span class="item-label-text">Total inscrits</span>
+            <span class="item-value">{{ totalAnimaux }}</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Modals & Drawers -->
-    <AnimalFormDrawer 
-      v-model:isOpen="isDrawerOpen" 
+    <AnimalFormDrawer
+      v-model:isOpen="isDrawerOpen"
       :animal="selectedAnimal"
       @save="handleSaveAnimal"
     />
@@ -244,7 +299,7 @@ const filterAlerte = ref(false);
       <div class="delete-content">
         <PhWarningCircle :size="32" color="#EF4444" weight="duotone" />
         <p>
-          Êtes-vous sûr de vouloir supprimer <strong>{{ animalToDelete?.name }}</strong> du troupeau ? 
+          Êtes-vous sûr de vouloir supprimer <strong>{{ animalToDelete?.name }}</strong> du troupeau ?
           Cette action est irréversible et supprimera tout l'historique associé.
         </p>
       </div>

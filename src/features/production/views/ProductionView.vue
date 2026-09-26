@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { PhDownloadSimple } from '@phosphor-icons/vue';
+import { useRouter } from 'vue-router';
+import { PhDownloadSimple, PhListPlus } from '@phosphor-icons/vue';
 import { getProductionSummary } from '../../../services/production_service.js';
 
 import ProductionKPIs from '../components/ProductionKPIs.vue';
@@ -8,6 +9,7 @@ import ProductionChart from '../components/ProductionChart.vue';
 import ProductionTable from '../components/ProductionTable.vue';
 import ProductionHistory from '../components/ProductionHistory.vue';
 
+const router = useRouter();
 const productionData = ref(null);
 const isLoading = ref(true);
 
@@ -38,6 +40,10 @@ const exportReport = () => {
       </div>
       
       <div class="header-actions">
+        <button class="btn-saisie" @click="router.push({ name: 'worker-saisie-lot' })">
+          <PhListPlus :size="16" weight="bold" />
+          Saisie par lot
+        </button>
         <button class="btn-export" @click="exportReport">
           <PhDownloadSimple :size="16" weight="bold" />
           Exporter le rapport
@@ -130,6 +136,28 @@ const exportReport = () => {
 .btn-export:hover {
   border-color: var(--text-muted);
   background: var(--bg-page);
+}
+
+.btn-saisie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--w-yellow, #FBBF24);
+  border: 1px solid var(--w-dark, #1A1A1A);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--w-dark, #1A1A1A);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  box-shadow: 2px 2px 0px var(--w-dark, #1A1A1A);
+}
+
+.btn-saisie:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 
 /* Layout */

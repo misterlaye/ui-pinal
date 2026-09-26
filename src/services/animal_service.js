@@ -1,16 +1,18 @@
 import { apiClient } from './api_client.js';
+import defaultCow from '../assets/images/default_cow.jpg';
 
 const mapAnimal = (backendData) => {
   return {
     id: backendData.id,
     name: backendData.nom,
     identifiant: backendData.identifiant,
-    race: backendData.raceId ? 'Race (ID)' : 'Inconnue', // MOCK race for now, as backend only returns raceId
-    status: backendData.statut ? backendData.statut.toLowerCase() : 'inconnu',
-    trend: 'up', // MOCK trend
+    raceId: backendData.raceId,
+    status: backendData.statut,
+    trend: null, // Sera implémenté dans la phase production/santé
+    dateNaissance: backendData.dateNaissance,
     age: backendData.dateNaissance ? calculateAge(backendData.dateNaissance) : 'N/A',
     lastEvent: 'Aucun événement récent', // MOCK
-    avatar: backendData.photoUrl || `https://loremflickr.com/150/150/cow?lock=${Math.floor(Math.random() * 100)}`,
+    avatar: backendData.photoUrl || defaultCow,
   };
 };
 
@@ -33,14 +35,15 @@ export async function getAnimalsList(exploitationId) {
  * Crée un nouvel animal dans l'exploitation.
  */
 export async function createAnimal(animalData) {
-  // Map frontend payload to backend request format
   const payload = {
     exploitationId: localStorage.getItem('active_exploitation_id'),
-    raceId: animalData.raceId || "10000000-0000-0000-0000-000000000001", // Fallback to Holstein UUID
+    raceId: animalData.raceId,
     identifiant: animalData.identifiant,
-    nom: animalData.name,
+    nom: animalData.nom || animalData.name,
     photoUrl: null,
-    dateNaissance: "2020-01-01" // Fallback mock birthdate
+    dateNaissance: animalData.dateNaissance || null,
+    mereId: animalData.mereId || null,
+    pereIdentifiant: animalData.pereIdentifiant || null
   };
   const { data } = await apiClient.post('/animals', payload);
   return mapAnimal(data);
@@ -59,11 +62,13 @@ export async function getAnimal(animalId) {
  */
 export async function updateAnimal(animalId, animalData) {
   const payload = {
-    raceId: animalData.raceId || "10000000-0000-0000-0000-000000000001",
+    raceId: animalData.raceId,
     identifiant: animalData.identifiant,
-    nom: animalData.name,
+    nom: animalData.nom || animalData.name,
     photoUrl: null,
-    dateNaissance: "2020-01-01"
+    dateNaissance: animalData.dateNaissance || null,
+    mereId: animalData.mereId || null,
+    pereIdentifiant: animalData.pereIdentifiant || null
   };
   const { data } = await apiClient.patch(`/animals/${animalId}`, payload);
   return mapAnimal(data);
@@ -78,10 +83,17 @@ export async function changeAnimalStatus(animalId, status) {
 }
 
 /**
- * Supprime un animal. (Backend may not support hard delete yet, checking..)
+ * Supprime un animal.
  */
 export async function deleteAnimal(animalId) {
-  // Wait, let's look if there is a delete endpoint in AnimalController. No there is not.
-  // I will throw an error for now if it's not supported, or just keep it as a placeholder.
-  throw new Error("Delete animal non implémenté dans le backend.");
+  const { data } = await apiClient.delete(`/animals/${animalId}`);
+  return data;
+}
+
+/**
+ * Déclare une sortie (Vente / Décès)
+ */
+export async function declareSortie(animalId, payload) {
+  const { data } = await apiClient.post(`/animals/${animalId}/sortie`, payload);
+  return data;
 }

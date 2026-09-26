@@ -38,25 +38,25 @@ const handleDelete = () => {
   emit('delete', props.animal);
 };
 
-const isAlertSante = computed(() => props.animal.status === 'alerte_sante');
-const isAlertProd = computed(() => props.animal.status === 'alerte_production');
-const isLactation = computed(() => props.animal.status === 'lactation');
-const isTarie = computed(() => props.animal.status === 'tarie');
+const isActif = computed(() => props.animal.status === 'ACTIF');
+const isVendu = computed(() => props.animal.status === 'VENDU');
+const isDecede = computed(() => props.animal.status === 'DECEDE');
+const isTarie = computed(() => props.animal.status === 'TARIE');
+
+const isAlertSante = computed(() => props.animal.isAlertSante || false);
+const isAlertProd = computed(() => props.animal.isAlertProd || false);
 
 const cardClass = computed(() => {
   return {
     'animal-card': true,
-    'animal-card--alert-sante': isAlertSante.value,
-    'animal-card--alert-prod': isAlertProd.value,
+    'animal-card--decede': isDecede.value,
   };
 });
 
 const badgeLabel = computed(() => {
-  if (isAlertSante.value) return 'ALERTE SANTÉ';
-  if (isAlertProd.value) return 'ALERTE PRODUCTION';
-  if (isLactation.value) return 'LACTATION';
-  if (isTarie.value) return 'TARIE';
-  return '';
+  if (isVendu.value) return 'VENDU';
+  if (isDecede.value) return 'DÉCÉDÉ';
+  return 'ACTIF';
 });
 
 const badgeClass = computed(() => {

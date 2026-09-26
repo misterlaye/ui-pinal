@@ -19,3 +19,18 @@ export const getProductionSummary = async () => {
     };
   }
 };
+
+export const recordBatchMilking = async (payload) => {
+  const { data } = await apiClient.post('/milkings/batch', payload);
+  return data;
+};
+
+export const getLactationCurve = async (lactationId) => {
+  const { data } = await apiClient.get(`/lactations/${lactationId}/milkings/courbe`);
+  return data;
+};
+
+export const recordMilkAnalysis = async (lactationId, payload) => {
+  const { data } = await apiClient.post(`/lactations/${lactationId}/analyses`, payload);
+  return data;
+};

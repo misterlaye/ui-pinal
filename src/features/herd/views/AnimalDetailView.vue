@@ -2,12 +2,18 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { PhArrowLeft, PhCow } from '@phosphor-icons/vue';
-import { getAnimal } from '../../../services/animal_service.js';
+import { getAnimal, declareSortie } from '../../../services/animal_service.js';
+import CycleReproductionWidget from '../components/CycleReproductionWidget.vue';
+import SortieAnimalModal from '../components/SortieAnimalModal.vue';
+import LactationChartWidget from '../components/LactationChartWidget.vue';
+import QualiteLaitWidget from '../components/QualiteLaitWidget.vue';
+import defaultCow from '../../../assets/images/default_cow.jpg';
 
 const route = useRoute();
 const router = useRouter();
 const animal = ref(null);
 const isLoading = ref(true);
+const showSortieModal = ref(false);
 
 // Nouvelles données simulées pour la fiche
 const ficheData = ref(null);
@@ -25,51 +31,17 @@ onMounted(async () => {
         race: "Prim'Holstein",
         status: 'lactation',
         identifiant: 'FR-4471-0932',
-        avatar: `https://loremflickr.com/800/600/cow?lock=${animalId}` // Image plus grande pour la fiche
+        avatar: defaultCow
       };
     }
 
-    // On enrichit avec des données statiques de démonstration pour le layout
+    // On initialise avec des données vides en attendant l'implémentation des phases 4 (Nutrition) et 5 (Santé)
     ficheData.value = {
-      localisation: 'Lot B – Étable Sud',
-      joursLactation: 127,
-      productionJour: 28.4,
-      poids: 642,
-      events: [
-        {
-          id: 1,
-          date: '18 MAR',
-          time: '08:14',
-          desc: 'Traite du matin enregistrée — 14.2 L, qualité conforme.',
-          type: 'solid',
-          color: '#849E73' // Vert doux (comme dans la maquette)
-        },
-        {
-          id: 2,
-          date: '17 MAR',
-          time: '19:02',
-          desc: 'Contrôle poids hebdomadaire effectué — stable (+1.2 kg).',
-          type: 'solid',
-          color: '#808080' // Gris
-        },
-        {
-          id: 3,
-          date: '16 MAR',
-          time: '09:40',
-          desc: 'Envisager un contrôle vétérinaire — légère baisse de production sur 3 jours.',
-          type: 'hollow',
-          color: '#C87533', // Ocre (hollow)
-          isRecommendation: true
-        },
-        {
-          id: 4,
-          date: '14 MAR',
-          time: '07:55',
-          desc: "Vaccination annuelle administrée par l'équipe vétérinaire.",
-          type: 'solid',
-          color: '#808080' // Gris
-        }
-      ]
+      localisation: 'Non assigné',
+      joursLactation: '--',
+      productionJour: '--',
+      poids: '--',
+      events: []
     };
 
   } catch (error) {
@@ -83,6 +55,17 @@ const goBack = () => {
   router.push('/dashboard/troupeau');
 };
 
+const handleSortieSubmit = async (payload) => {
+  try {
+    await declareSortie(animal.value.id, payload);
+    showSortieModal.value = false;
+    router.push('/dashboard/troupeau'); // Retour au troupeau après la sortie
+  } catch (error) {
+    console.error("Erreur déclaration de sortie:", error);
+    alert("Erreur lors de la déclaration de sortie.");
+  }
+};
+
 </script>
 
 <template>
@@ -93,6 +76,10 @@ const goBack = () => {
       <button class="back-button" @click="goBack">
         <PhArrowLeft :size="20" weight="bold" />
         Retour au troupeau
+      </button>
+
+      <button class="btn-sortie" @click="showSortieModal = true" v-if="animal.status !== 'VENDU' && animal.status !== 'DECEDE'">
+        Déclarer une sortie
       </button>
     </div>
 
@@ -127,8 +114,7 @@ const goBack = () => {
 
         <!-- Grande photo -->
         <div class="photo-container">
-          <!-- Si on a un avatar loremflickr de taille 150, on modifie l'URL pour la rendre plus grande si possible, ou on laisse l'image s'étirer (object-fit: cover) -->
-          <img :src="animal.avatar.replace('150/150', '800/600')" alt="Photo de l'animal" class="animal-photo" />
+          <img :src="animal.avatar" alt="Photo de l'animal" class="animal-photo" />
         </div>
 
       </div>
@@ -158,13 +144,19 @@ const goBack = () => {
           </div>
         </div>
 
+        <!-- Section Reproduction -->
+        <CycleReproductionWidget :animalId="animal.id" />
+
+        <!-- Production Avancée (Phase 3) -->
+        <LactationChartWidget :lactationId="animal.id" />
+        <QualiteLaitWidget :lactationId="animal.id" />
+
         <!-- Section Timeline -->
         <div class="timeline-section">
           <h3 class="section-title">DERNIERS ÉVÉNEMENTS</h3>
           
-          <div class="timeline">
+          <div class="timeline" v-if="ficheData.events.length > 0">
             <div class="timeline-item" v-for="event in ficheData.events" :key="event.id">
-              
               <!-- Bullet -->
               <div class="timeline-bullet-col">
                 <div 
@@ -175,29 +167,35 @@ const goBack = () => {
                     borderColor: event.color 
                   }"
                 ></div>
-                <!-- Ligne de liaison générée en CSS via ::after sur la colonne, sauf pour le dernier -->
               </div>
-
               <!-- Contenu -->
               <div class="timeline-content-col">
                 <div class="event-datetime">
                   <span class="event-date">{{ event.date }}</span>
                   <span class="event-time">{{ event.time }}</span>
                 </div>
-                
                 <div class="event-details" :class="{'recommendation-box': event.isRecommendation}">
                   <span v-if="event.isRecommendation" class="recommendation-label">RECOMMANDATION</span>
                   <p class="event-desc">{{ event.desc }}</p>
                 </div>
               </div>
-
             </div>
+          </div>
+          <div v-else style="color: var(--text-muted); font-size: 13px;">
+            L'historique des événements sera disponible lors de l'intégration du module Santé (Phase 5).
           </div>
         </div>
 
       </div>
 
     </div>
+
+    <!-- Modale de sortie -->
+    <SortieAnimalModal
+      v-model:isOpen="showSortieModal"
+      :animalId="animal.id"
+      @submit="handleSortieSubmit"
+    />
   </div>
   
   <div v-else-if="isLoading" class="loading-state">
@@ -217,6 +215,24 @@ const goBack = () => {
 
 .top-nav {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-sortie {
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: opacity var(--transition-fast);
+}
+
+.btn-sortie:hover {
+  opacity: 0.9;
 }
 
 .back-button {
