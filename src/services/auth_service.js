@@ -29,6 +29,25 @@ export async function verifyOtp(telephone, code) {
 }
 
 /**
+ * Vérifie le code PIN (Ouvrier/Gérant) et récupère les tokens JWT.
+ */
+export async function verifyPin(telephone, code) {
+  const { data } = await apiClient.post('/auth/pin/verify', { telephone, code });
+
+  if (data.accessToken) {
+    localStorage.setItem('jwt_token', data.accessToken);
+  }
+  if (data.refreshToken) {
+    localStorage.setItem('refresh_token', data.refreshToken);
+  }
+  if (data.userId) {
+    localStorage.setItem('user_id', data.userId);
+  }
+
+  return data;
+}
+
+/**
  * Enregistre ou met à jour le profil utilisateur.
  */
 export async function registerUser({ telephone, nom, prenom, email }) {

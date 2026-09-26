@@ -25,7 +25,7 @@ async function handleRequestOtp() {
     const formattedPhone = telephone.value.startsWith('+') ? telephone.value : '+221' + telephone.value.replace(/^0+/, '');
     await requestOtp(formattedPhone);
     updateData({ telephone: formattedPhone });
-    setStep(3); // Verify OTP step
+    setStep(2); // Verify OTP step
     router.push({ name: 'onboarding-verify-otp' });
   } catch (err) {
     error.value = "Erreur lors de l'envoi du code. Veuillez réessayer.";

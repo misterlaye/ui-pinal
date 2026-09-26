@@ -29,8 +29,9 @@ apiClient.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       // Session expired or invalid token
       localStorage.removeItem('jwt_token');
-      localStorage.removeItem('jwt_refresh_token');
+      localStorage.removeItem('refresh_token');
       localStorage.removeItem('active_exploitation_id');
+      localStorage.removeItem('active_role');
       window.location.href = '/onboarding/welcome';
     }
     return Promise.reject(error);

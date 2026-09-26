@@ -23,15 +23,15 @@ const routes = [
         meta: { step: 1 },
       },
       {
-        path: 'register',
-        name: 'onboarding-register',
-        component: () => import('../features/identity/views/RegisterView.vue'),
-        meta: { step: 2 },
-      },
-      {
         path: 'verify-otp',
         name: 'onboarding-verify-otp',
         component: () => import('../features/identity/views/VerifyOtpView.vue'),
+        meta: { step: 2 },
+      },
+      {
+        path: 'register',
+        name: 'onboarding-register',
+        component: () => import('../features/identity/views/RegisterView.vue'),
         meta: { step: 3 },
       },
       {
@@ -58,10 +58,12 @@ const routes = [
     path: '/select-exploitation',
     name: 'select-exploitation',
     component: () => import('../features/identity/views/SelectExploitationView.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/dashboard',
     component: DashboardLayout,
+    meta: { requiresAuth: true, requiresExploitation: true, allowedRoles: ['PROPRIETAIRE'] },
     children: [
       {
         path: '',
@@ -98,13 +100,111 @@ const routes = [
         name: 'dashboard-finances',
         component: () => import('../features/finance/views/FinanceView.vue'),
       },
+      {
+        path: 'equipe',
+        name: 'dashboard-equipe',
+        component: () => import('../features/identity/views/TeamView.vue'),
+      },
     ],
   },
+  {
+    path: '/worker/login',
+    name: 'worker-login',
+    component: () => import('../features/identity/views/WorkerLoginView.vue'),
+  },
+  {
+    path: '/worker',
+    component: () => import('../layouts/WorkerLayout.vue'),
+    meta: { requiresAuth: true, requiresExploitation: true, allowedRoles: ['EMPLOYE', 'GERANT'] },
+    children: [
+      {
+        path: 'home',
+        name: 'worker-home',
+        component: () => import('../features/worker/views/WorkerHomeView.vue'),
+      },
+      {
+        path: 'animals',
+        name: 'worker-animals',
+        component: () => import('../features/worker/views/WorkerAnimalsView.vue'),
+      },
+      {
+        path: 'saisie-lot',
+        name: 'worker-saisie-lot',
+        component: () => import('../features/worker/views/SaisieTraiteLotView.vue'),
+      },
+      {
+        path: 'animal-detail/:id',
+        name: 'worker-animal-detail',
+        component: () => import('../features/worker/views/WorkerAnimalDetailView.vue'),
+      },
+      {
+        path: 'history',
+        name: 'worker-history',
+        component: () => import('../features/worker/views/WorkerHistoryView.vue'),
+      },
+      {
+        path: 'alerts',
+        name: 'worker-alerts',
+        component: () => import('../features/worker/views/WorkerHomeView.vue'), // To implement later
+      },
+      {
+        path: 'profile',
+        name: 'worker-profile',
+        component: () => import('../features/worker/views/WorkerHomeView.vue'), // To implement later
+      }
+    ]
+  }
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('jwt_token');
+  const exploitationId = localStorage.getItem('active_exploitation_id');
+  const role = localStorage.getItem('active_role');
+
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    if (!token) {
+      return next({ name: 'onboarding-welcome' });
+    }
+
+    if (to.matched.some(record => record.meta.requiresExploitation)) {
+      if (!exploitationId) {
+        return next({ name: 'select-exploitation' });
+      }
+
+      // Role Check
+      const targetRecord = to.matched.find(record => record.meta.allowedRoles);
+      if (targetRecord && targetRecord.meta.allowedRoles) {
+        if (!targetRecord.meta.allowedRoles.includes(role)) {
+          // Si le rôle ne correspond pas, rediriger vers la bonne interface ou select
+          if (role === 'EMPLOYE' || role === 'GERANT') {
+            return next({ name: 'worker-home' });
+          } else if (role === 'PROPRIETAIRE') {
+            return next({ name: 'dashboard' });
+          } else {
+            return next({ name: 'select-exploitation' });
+          }
+        }
+      }
+    }
+  } else if (to.path.startsWith('/onboarding') && token) {
+    if (exploitationId) {
+      if (to.name === 'onboarding-welcome' || to.name === 'onboarding-register' || to.name === 'onboarding-verify-otp') {
+        if (role === 'EMPLOYE' || role === 'GERANT') return next({ name: 'worker-home' });
+        return next({ name: 'dashboard' });
+      }
+    } else {
+      if (to.name === 'onboarding-welcome') {
+        return next({ name: 'select-exploitation' });
+      }
+    }
+  }
+
+  next();
 });
 
 export default router;

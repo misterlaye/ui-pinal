@@ -69,8 +69,8 @@ async function handleVerify(code) {
 
     // Check if the user is new and needs to set up their profile
     const user = await getCurrentUser();
-    if (!user.nom || user.nom === 'Nom' || !user.prenom || user.prenom === 'Prénom') {
-      setStep(2);
+    if (!user.nom || user.nom === 'Nom' || !user.prenom || user.prenom === 'Prénom' || user.nom === 'Inconnu') {
+      setStep(3);
       router.push({ name: 'onboarding-register' });
       return;
     }

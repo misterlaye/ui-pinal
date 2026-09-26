@@ -10,6 +10,7 @@ const navItems = [
   { label: 'Santé', route: '/dashboard/sante' },
   { label: 'Nutrition', route: '/dashboard/nutrition' },
   { label: 'Finances', route: '/dashboard/finances' },
+  { label: 'Équipe', route: '/dashboard/equipe' },
 ];
 
 const mobileMenuOpen = ref(false);
