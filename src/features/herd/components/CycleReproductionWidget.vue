@@ -7,7 +7,8 @@ import {
   getCycles, 
   declarerInsemination, 
   enregistrerConstat, 
-  declarerVelage 
+  declarerVelage,
+  declarerAvortement
 } from '../../../services/reproduction_service.js';
 import { useExploitation } from '../../../composables/useExploitation.js';
 
@@ -102,14 +103,27 @@ const handleVelage = async () => {
   }
 };
 
+const handleAvortement = async () => {
+  if (confirm("Confirmer l'avortement ? Le cycle sera terminé.")) {
+    try {
+      if (!activeCycle.value) return;
+      await declarerAvortement(activeCycle.value.id);
+      await loadCycles();
+      emit('cycleUpdated');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+};
+
 // UI Helpers
 const getStatusLabel = (status) => {
   const map = {
     'EN_ATTENTE_CONSTAT': 'En attente de constat',
     'GESTANTE': 'Gestante',
     'VIDE': 'Vide',
-    'AVORTEE': 'Avortée',
-    'TERMINEE_VELAGE': 'Terminée (Vêlage)'
+    'AVORTEE': 'Vide (Avortement)',
+    'TERMINEE_VELAGE': 'Vide (Vêlage)'
   };
   return map[status] || status;
 };
@@ -119,8 +133,8 @@ const getStatusColor = (status) => {
     'EN_ATTENTE_CONSTAT': '#C87533', // Ocre
     'GESTANTE': '#849E73', // Vert
     'VIDE': '#E74C3C', // Rouge
-    'AVORTEE': '#808080', // Gris
-    'TERMINEE_VELAGE': '#3498DB' // Bleu
+    'AVORTEE': '#E74C3C', // Rouge
+    'TERMINEE_VELAGE': '#E74C3C' // Rouge (puisqu'elle est de nouveau VIDE)
   };
   return map[status] || '#808080';
 };
@@ -201,6 +215,13 @@ const getStatusColor = (status) => {
               <p class="meta text-success">Vêlage terminé</p>
             </div>
           </div>
+        </div>
+
+        <!-- Abortion Action (if Gestante) -->
+        <div v-if="activeCycle.statut === 'GESTANTE'" class="abort-action" style="margin-top: 16px; text-align: right;">
+           <PnButton variant="secondary" @click="handleAvortement" style="color: #E74C3C; border-color: #E74C3C;">
+             Déclarer un avortement
+           </PnButton>
         </div>
       </div>
       

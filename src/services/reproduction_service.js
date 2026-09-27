@@ -22,3 +22,8 @@ export async function declarerVelage(cycleId, payload) {
   const { data } = await apiClient.post(`/reproduction/cycles/${cycleId}/velage`, payload);
   return data;
 }
+
+export async function declarerAvortement(cycleId) {
+  const { data } = await apiClient.post(`/reproduction/cycles/${cycleId}/avortement`);
+  return data;
+}

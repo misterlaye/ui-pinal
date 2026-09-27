@@ -151,17 +151,37 @@ const vendusCount = computed(() => animals.value.filter(a => a.status === 'VENDU
 const decedesCount = computed(() => animals.value.filter(a => a.status === 'DECEDE').length);
 
 const searchQuery = ref('');
+const filterRace = ref('');
+const filterStatus = ref('');
 const filterLactation = ref(false);
 const filterTarie = ref(false);
 const filterAlerte = ref(false);
 
+const uniqueRaces = computed(() => {
+  return [...new Set(animals.value.map(a => a.race))];
+});
+
 const filteredAnimals = computed(() => {
   return animals.value.filter(a => {
-    if (searchQuery.value && !a.name.toLowerCase().includes(searchQuery.value.toLowerCase())) {
+    // Text search
+    if (searchQuery.value && !a.name.toLowerCase().includes(searchQuery.value.toLowerCase()) &&
+        !(a.identifiant && a.identifiant.toLowerCase().includes(searchQuery.value.toLowerCase()))) {
       return false;
     }
-    // Simplistic filter since we don't have lactation/tarie in animal object directly yet
+
+    // Race filter
+    if (filterRace.value && a.race !== filterRace.value) {
+      return false;
+    }
+
+    // Status filter
+    if (filterStatus.value && a.status !== filterStatus.value) {
+      return false;
+    }
+
+    // Pill filters
     if (filterLactation.value && a.status !== 'ACTIF') return false;
+
     return true;
   });
 });
@@ -190,19 +210,19 @@ const filteredAnimals = computed(() => {
 
       <div class="filters">
         <div class="select-wrapper">
-          <select class="filter-select">
-            <option>Race : Toutes</option>
-            <option>Gudali</option>
-            <option>Montbéliarde</option>
+          <select class="filter-select" v-model="filterRace">
+            <option value="">Race : Toutes</option>
+            <option v-for="r in uniqueRaces" :key="r" :value="r">{{ r }}</option>
           </select>
           <PhCaretDown :size="12" class="select-icon" />
         </div>
 
         <div class="select-wrapper">
-          <select class="filter-select">
-            <option>Statut : Tous</option>
-            <option>En Lactation</option>
-            <option>Tarie</option>
+          <select class="filter-select" v-model="filterStatus">
+            <option value="">Statut : Tous</option>
+            <option value="ACTIF">Actifs</option>
+            <option value="VENDU">Vendus</option>
+            <option value="DECEDE">Décédés</option>
           </select>
           <PhCaretDown :size="12" class="select-icon" />
         </div>
