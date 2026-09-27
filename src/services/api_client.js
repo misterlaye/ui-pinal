@@ -27,12 +27,16 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Session expired or invalid token
-      localStorage.removeItem('jwt_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('active_exploitation_id');
-      localStorage.removeItem('active_role');
-      window.location.href = '/onboarding/welcome';
+      const url = error.config.url;
+      // Do not redirect if the error is from a login endpoint
+      if (!url.includes('/auth/pin/verify') && !url.includes('/auth/otp/verify')) {
+        // Session expired or invalid token
+        localStorage.removeItem('jwt_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('active_exploitation_id');
+        localStorage.removeItem('active_role');
+        window.location.href = '/onboarding/welcome';
+      }
     }
     return Promise.reject(error);
   }
