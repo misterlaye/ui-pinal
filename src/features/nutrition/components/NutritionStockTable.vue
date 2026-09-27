@@ -14,18 +14,17 @@ const props = defineProps({
     <div class="card-header">
       <div class="title-group">
         <PhArchiveBox :size="20" weight="fill" color="#C87533" />
-        <h3 class="card-title">Stock des aliments</h3>
+        <h3 class="card-title">Consommation Journalière des Aliments</h3>
       </div>
     </div>
     
-    <div class="table-container">
+    <div class="table-container" v-if="stocks && stocks.length">
       <table class="pn-table">
         <thead>
           <tr>
             <th>Aliment</th>
-            <th>Stock Actuel</th>
-            <th>Consommation Journalière</th>
-            <th>Jours Restants</th>
+            <th>Consommation Journalière Troupeau</th>
+            <th>Prix Unitaire en Vigueur</th>
             <th>Statut</th>
           </tr>
         </thead>
@@ -34,36 +33,38 @@ const props = defineProps({
             <!-- Aliment -->
             <td>
               <div class="aliment-info">
-                <div class="aliment-icon" :style="{ color: item.iconColor }">
-                  <PhLeaf :size="16" weight="fill" />
+                <div class="aliment-icon">
+                  <PhLeaf :size="16" weight="fill" color="#C87533" />
                 </div>
                 <span class="aliment-name">{{ item.name }}</span>
               </div>
             </td>
             
-            <!-- Stock Actuel -->
-            <td class="font-bold">{{ item.stock }} <span class="unit">{{ item.unit }}</span></td>
-            
             <!-- Consommation -->
-            <td class="text-muted">{{ item.dailyCons }} {{ item.unit }}/jour</td>
+            <td class="font-bold">
+              {{ item.consumptionRate || item.dailyCons || 0 }}
+              <span class="unit">{{ item.unit || 'kg' }}/jour</span>
+            </td>
             
-            <!-- Jours Restants -->
-            <td class="font-medium">{{ item.daysLeft }} jours</td>
+            <!-- Prix Unitaire / Statut -->
+            <td class="price-cell">
+              {{ item.status }}
+            </td>
             
             <!-- Status Badge -->
             <td>
               <span class="status-badge" 
-                    :class="{
-                      'badge-ok': item.status === 'OK',
-                      'badge-warning': item.status === 'STOCK BAS',
-                      'badge-critical': item.status === 'CRITIQUE'
-                    }">
-                {{ item.status }}
+                    :class="(item.consumptionRate > 0) ? 'badge-ok' : 'badge-idle'">
+                {{ (item.consumptionRate > 0) ? 'En distribution' : 'Non distribué' }}
               </span>
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div v-else class="empty-stock">
+      Aucun aliment référencé au catalogue.
     </div>
   </div>
 </template>
@@ -78,7 +79,7 @@ const props = defineProps({
 }
 
 .card-header {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .title-group {
@@ -89,7 +90,7 @@ const props = defineProps({
 
 .card-title {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-dark);
   margin: 0;
 }
@@ -101,32 +102,30 @@ const props = defineProps({
 .pn-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 600px;
+  text-align: left;
 }
 
 .pn-table th {
-  text-align: left;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-light);
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
+  border-bottom: 1px solid var(--border-light);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .pn-table td {
   padding: 16px;
-  border-bottom: 1px solid var(--border-light);
   font-size: 13px;
-  vertical-align: middle;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--border-light);
 }
 
-.pn-table tr:last-child td {
+.pn-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* Aliment Cell */
 .aliment-info {
   display: flex;
   align-items: center;
@@ -134,52 +133,55 @@ const props = defineProps({
 }
 
 .aliment-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: #FDF9F5;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--bg-page);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
 }
 
 .aliment-name {
   font-weight: 600;
-  color: var(--text-dark);
-  font-size: 14px;
 }
 
-/* Typography */
-.text-muted { color: var(--text-muted); }
-.font-medium { font-weight: 500; color: var(--text-dark); }
-.font-bold { font-weight: 700; color: var(--text-dark); }
-.unit { color: var(--text-muted); font-weight: 400; font-size: 12px; }
+.font-bold {
+  font-weight: 600;
+}
 
-/* Status Badge */
+.unit {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.price-cell {
+  font-weight: 500;
+  color: #C87533;
+}
+
 .status-badge {
-  padding: 4px 10px;
-  border-radius: 100px;
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: inline-flex;
-  justify-content: center;
-  min-width: 70px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
 }
 
 .badge-ok {
-  background-color: #ECFDF5;
-  color: #059669;
+  background: #ECFDF5;
+  color: #10B981;
 }
 
-.badge-warning {
-  background-color: #FEF3C7;
-  color: #D97706;
+.badge-idle {
+  background: #F3F4F6;
+  color: #9CA3AF;
 }
 
-.badge-critical {
-  background-color: #FEE2E2;
-  color: #EF4444;
+.empty-stock {
+  text-align: center;
+  padding: 30px;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 </style>

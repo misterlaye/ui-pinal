@@ -7,12 +7,15 @@ import NutritionKPIs from '../components/NutritionKPIs.vue';
 import NutritionRationGroups from '../components/NutritionRationGroups.vue';
 import NutritionStockTable from '../components/NutritionStockTable.vue';
 import NutritionDeliveries from '../components/NutritionDeliveries.vue';
+import NutritionCatalogue from '../components/NutritionCatalogue.vue';
 
+const currentTab = ref('dashboard');
 const nutritionData = ref(null);
 const isLoading = ref(true);
 
-onMounted(async () => {
+const loadDashboardData = async () => {
   try {
+    isLoading.value = true;
     const data = await getNutritionDashboard();
     nutritionData.value = data;
   } catch (error) {
@@ -20,15 +23,18 @@ onMounted(async () => {
   } finally {
     isLoading.value = false;
   }
+};
+
+const switchTab = (tab) => {
+  currentTab.value = tab;
+  if (tab === 'dashboard') {
+    loadDashboardData();
+  }
+};
+
+onMounted(() => {
+  loadDashboardData();
 });
-
-const exportReport = () => {
-  alert("Génération du rapport nutritionnel en cours...");
-};
-
-const newDelivery = () => {
-  alert("Ouverture du formulaire de nouvelle livraison...");
-};
 </script>
 
 <template>
@@ -38,27 +44,32 @@ const newDelivery = () => {
     <header class="page-header">
       <div class="header-titles">
         <h1 class="page-title">Nutrition & Alimentation</h1>
-        <p class="page-subtitle">Gestion des rations et du stock alimentaire</p>
+        <p class="page-subtitle">Gestion des rations, du coût journalier et du catalogue d'aliments</p>
       </div>
       
       <div class="header-actions">
-        <button class="btn-secondary" @click="exportReport">
-          <PhDownloadSimple :size="16" weight="bold" />
-          Exporter le rapport
-        </button>
-        <button class="btn-primary" @click="newDelivery">
+        <button class="btn-primary" @click="switchTab('catalogue')">
           <PhPlus :size="16" weight="bold" />
-          Nouvelle livraison
+          Catalogue d'aliments
         </button>
       </div>
     </header>
 
+    <div class="tabs-nav">
+      <button class="tab-btn" :class="{ active: currentTab === 'dashboard' }" @click="switchTab('dashboard')">
+        Tableau de bord
+      </button>
+      <button class="tab-btn" :class="{ active: currentTab === 'catalogue' }" @click="switchTab('catalogue')">
+        Catalogue d'aliments & Prix
+      </button>
+    </div>
+
     <!-- Main Content -->
-    <div v-if="isLoading" class="loading-state">
+    <div v-if="isLoading && !nutritionData" class="loading-state">
       Chargement du module nutrition...
     </div>
 
-    <div v-else-if="nutritionData" class="dashboard-content">
+    <div v-else-if="currentTab === 'dashboard' && nutritionData" class="dashboard-content">
       
       <!-- Top KPIs -->
       <section class="section">
@@ -70,15 +81,15 @@ const newDelivery = () => {
         <NutritionRationGroups :groups="nutritionData.rationGroups" />
       </section>
 
-      <!-- Stock & Deliveries Layout -->
+      <!-- Stock & Daily Consumption Table -->
       <section class="section">
         <NutritionStockTable :stocks="nutritionData.stocks" />
       </section>
 
-      <section class="section">
-        <NutritionDeliveries :deliveries="nutritionData.deliveries" />
-      </section>
+    </div>
 
+    <div v-else-if="currentTab === 'catalogue'">
+      <NutritionCatalogue />
     </div>
 
   </div>
@@ -174,6 +185,45 @@ const newDelivery = () => {
   justify-content: center;
   padding: 80px 0;
   color: var(--text-muted);
+}
+
+/* Tabs */
+.tabs-nav {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 8px;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 12px 0;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+  transition: color var(--transition-fast);
+}
+
+.tab-btn:hover {
+  color: var(--text-dark);
+}
+
+.tab-btn.active {
+  color: var(--text-dark);
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--text-dark);
 }
 
 /* Responsive */

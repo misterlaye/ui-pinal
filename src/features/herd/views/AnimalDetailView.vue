@@ -3,10 +3,13 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { PhArrowLeft, PhCow } from '@phosphor-icons/vue';
 import { getAnimal, declareSortie } from '../../../services/animal_service.js';
+import { getWorkerAnimalDetail } from '../../../services/worker_service.js';
+import { tarirLactation } from '../../../services/production_service.js';
 import CycleReproductionWidget from '../components/CycleReproductionWidget.vue';
 import SortieAnimalModal from '../components/SortieAnimalModal.vue';
 import LactationChartWidget from '../components/LactationChartWidget.vue';
 import QualiteLaitWidget from '../components/QualiteLaitWidget.vue';
+import RationWidget from '../../nutrition/components/RationWidget.vue';
 import defaultCow from '../../../assets/images/default_cow.jpg';
 
 const route = useRoute();
@@ -36,11 +39,26 @@ onMounted(async () => {
     }
 
     // On initialise avec des données vides en attendant l'implémentation des phases 4 (Nutrition) et 5 (Santé)
+    let prodJour = '--';
+    let isLactating = false;
+    try {
+      const detail = await getWorkerAnimalDetail(animalId);
+      if (detail && detail.lastMilkingVolume) {
+        prodJour = detail.lastMilkingVolume;
+      }
+      if (detail && detail.isLactating) {
+        isLactating = detail.isLactating;
+      }
+    } catch (e) {
+      console.warn("Could not fetch production detail");
+    }
+
     ficheData.value = {
-      localisation: 'Non assigné',
-      joursLactation: '--',
-      productionJour: '--',
-      poids: '--',
+      localisation: 'Par défaut (Phase 4)',
+      joursLactation: 'Calcule (Phase 3)',
+      productionJour: prodJour,
+      isLactating: isLactating,
+      poids: '-- (Phase 4)',
       events: []
     };
 
@@ -66,6 +84,19 @@ const handleSortieSubmit = async (payload) => {
   }
 };
 
+const handleTarir = async () => {
+  if (confirm("Voulez-vous déclarer le tarissement de cet animal ? Il n'apparaîtra plus dans les animaux à traire.")) {
+    try {
+      await tarirLactation(animal.value.id);
+      ficheData.value.isLactating = false;
+      alert("Tarissement enregistré avec succès.");
+    } catch (error) {
+      console.error("Erreur lors du tarissement:", error);
+      alert("Impossible de déclarer le tarissement.");
+    }
+  }
+};
+
 </script>
 
 <template>
@@ -78,9 +109,14 @@ const handleSortieSubmit = async (payload) => {
         Retour au troupeau
       </button>
 
-      <button class="btn-sortie" @click="showSortieModal = true" v-if="animal.status !== 'VENDU' && animal.status !== 'DECEDE'">
-        Déclarer une sortie
-      </button>
+      <div style="display: flex; gap: 12px;">
+        <button class="btn-tarir" @click="handleTarir" v-if="ficheData.isLactating">
+          Déclarer un tarissement
+        </button>
+        <button class="btn-sortie" @click="showSortieModal = true" v-if="animal.status !== 'VENDU' && animal.status !== 'DECEDE'">
+          Déclarer une sortie
+        </button>
+      </div>
     </div>
 
     <!-- Layout 2 colonnes -->
@@ -143,6 +179,9 @@ const handleSortieSubmit = async (payload) => {
             </div>
           </div>
         </div>
+
+        <!-- Section Nutrition / Ration -->
+        <RationWidget :animalId="animal.id" />
 
         <!-- Section Reproduction -->
         <CycleReproductionWidget :animalId="animal.id" />
@@ -232,6 +271,22 @@ const handleSortieSubmit = async (payload) => {
 }
 
 .btn-sortie:hover {
+  opacity: 0.9;
+}
+
+.btn-tarir {
+  background-color: #F59E0B;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: opacity var(--transition-fast);
+}
+
+.btn-tarir:hover {
   opacity: 0.9;
 }
 

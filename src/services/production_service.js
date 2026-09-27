@@ -34,3 +34,8 @@ export const recordMilkAnalysis = async (lactationId, payload) => {
   const { data } = await apiClient.post(`/lactations/${lactationId}/analyses`, payload);
   return data;
 };
+
+export const tarirLactation = async (animalId) => {
+  const { data } = await apiClient.post(`/lactations/animals/${animalId}/tarir`);
+  return data;
+};
