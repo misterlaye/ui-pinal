@@ -24,9 +24,8 @@ const props = defineProps({
           <tr>
             <th>Animal</th>
             <th>Date</th>
-            <th>Traitement</th>
-            <th>Motif</th>
-            <th>Vétérinaire</th>
+            <th>Type</th>
+            <th>Description</th>
             <th>Statut</th>
           </tr>
         </thead>
@@ -35,15 +34,14 @@ const props = defineProps({
             <!-- Animal Info -->
             <td>
               <div class="animal-info">
-                <img :src="item.avatar" :alt="item.name" class="avatar" />
-                <span class="animal-name">{{ item.name }}</span>
+                <img src="../../../assets/images/default_cow.jpg" :alt="item.animalName" class="avatar" />
+                <span class="animal-name">{{ item.animalName }}</span>
               </div>
             </td>
             
-            <td class="text-muted">{{ item.date }}</td>
-            <td class="font-medium">{{ item.traitement }}</td>
-            <td class="text-muted">{{ item.motif }}</td>
-            <td class="text-muted">{{ item.veto }}</td>
+            <td class="text-muted">{{ new Date(item.date).toLocaleDateString('fr-FR') }}</td>
+            <td class="font-medium">{{ item.type }}</td>
+            <td class="text-muted" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.description }}</td>
             
             <!-- Status Badge -->
             <td>

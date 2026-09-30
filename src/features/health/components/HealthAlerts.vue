@@ -18,9 +18,8 @@ const activeAlerts = computed(() => {
   return localAlerts.value.filter(a => !resolvedIds.value.has(a.id));
 });
 
-const handleResolve = (id) => {
-  resolvedIds.value.add(id);
-  emit('resolve-alert', id);
+const handleResolve = (alert) => {
+  emit('resolve-alert', alert);
 };
 
 const handleView = (animalId) => {
@@ -51,19 +50,19 @@ const handleView = (animalId) => {
         
         <!-- Left: Avatar -->
         <div class="alert-avatar-col">
-          <img :src="alert.avatar" :alt="alert.name" class="alert-avatar" />
+          <img src="../../../assets/images/default_cow.jpg" :alt="alert.animalName" class="alert-avatar" />
         </div>
 
         <!-- Middle: Content -->
         <div class="alert-content-col">
           <div class="alert-header">
-            <span class="animal-name">{{ alert.name }}</span>
-            <span class="risk-badge" :class="alert.level === 'RISQUE ÉLEVÉ' ? 'risk-high' : 'risk-medium'">
-              {{ alert.level }}
+            <span class="animal-name">{{ alert.animalName }} - {{ alert.animalIdentifier }}</span>
+            <span class="risk-badge" :class="alert.severity === 'RISQUE ÉLEVÉ' ? 'risk-high' : 'risk-medium'">
+              {{ alert.severity }}
             </span>
           </div>
-          <p class="alert-description">{{ alert.description }}</p>
-          <span class="alert-time">{{ alert.time }}</span>
+          <p class="alert-description">{{ alert.message }}</p>
+          <span class="alert-time">{{ new Date(alert.date).toLocaleDateString('fr-FR') }} - {{ new Date(alert.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}) }}</span>
         </div>
 
         <!-- Right: Actions -->
@@ -72,7 +71,7 @@ const handleView = (animalId) => {
             <PhEye :size="16" weight="bold" />
             Voir l'animal
           </button>
-          <button class="btn-action btn-resolve" @click="handleResolve(alert.id)">
+          <button class="btn-action btn-resolve" @click="handleResolve(alert)">
             <PhCheck :size="16" weight="bold" />
             Marquer comme traité
           </button>

@@ -1,5 +1,6 @@
 <script setup>
 import { PhCalendarBlank } from '@phosphor-icons/vue';
+import defaultCow from '../../../assets/images/default_cow.jpg';
 
 const props = defineProps({
   vaccinations: {
@@ -22,7 +23,7 @@ const props = defineProps({
       <div v-for="item in vaccinations" :key="item.id" class="vaccine-item">
         
         <div class="vaccine-info-group">
-          <img :src="item.avatar" :alt="item.name" class="avatar" />
+          <img :src="defaultCow" :alt="item.name" class="avatar" />
           <div class="vaccine-details">
             <span class="animal-name">{{ item.name }}</span>
             <span class="vaccine-name">{{ item.vaccine }}</span>

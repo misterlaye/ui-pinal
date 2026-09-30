@@ -4,7 +4,8 @@ import { PhThermometer, PhWarning, PhDrop, PhWind } from '@phosphor-icons/vue';
 const props = defineProps({
   thermalData: {
     type: Object,
-    required: true
+    required: false,
+    default: null
   }
 });
 </script>
@@ -19,7 +20,7 @@ const props = defineProps({
       </div>
     </div>
 
-    <div class="thermal-grid">
+    <div v-if="thermalData" class="thermal-grid">
       
       <!-- Température -->
       <div class="thermal-card">
@@ -80,6 +81,10 @@ const props = defineProps({
       </div>
 
     </div>
+    
+    <div v-else class="empty-state">
+      Données environnementales non configurées. En attente du raccordement au module Météo.
+    </div>
 
   </div>
 </template>
@@ -108,6 +113,16 @@ const props = defineProps({
   font-weight: 700;
   color: var(--text-dark);
   margin: 0;
+}
+
+.empty-state {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
 }
 
 .thermal-grid {

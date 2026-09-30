@@ -2,17 +2,20 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { PhDownloadSimple } from '@phosphor-icons/vue';
-import { getHealthDashboard } from '../../../services/health_service.js';
+import { getHealthDashboard, resolveHealthAlert } from '../../../services/health_service.js';
 
 import HealthKPIs from '../components/HealthKPIs.vue';
 import HealthAlerts from '../components/HealthAlerts.vue';
 import HealthHistory from '../components/HealthHistory.vue';
 import HealthVaccinationCalendar from '../components/HealthVaccinationCalendar.vue';
 import HealthThermalStress from '../components/HealthThermalStress.vue';
+import ResolveAlertModal from '../components/ResolveAlertModal.vue';
 
 const router = useRouter();
 const healthData = ref(null);
 const isLoading = ref(true);
+const isResolveModalOpen = ref(false);
+const alertToResolve = ref(null);
 
 onMounted(async () => {
   try {
@@ -26,18 +29,51 @@ onMounted(async () => {
 });
 
 const exportReport = () => {
-  alert("Génération du rapport de suivi sanitaire en cours...");
+  if (!healthData.value) return;
+  const rows = [
+    ['Type', 'Animal', 'Date', 'Description / Message', 'Statut / Severite'],
+    ...(healthData.value.alerts || []).map(a => ['ALERTE', a.animalName, a.date, a.message, a.severity]),
+    ...(healthData.value.history || []).map(h => ['HISTORIQUE', h.animalName, h.date, h.description, h.status])
+  ];
+  const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(";")).join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `suivi_sanitaire_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 const handleViewAnimal = (animalId) => {
   router.push(`/dashboard/troupeau/${animalId}`);
 };
 
-const handleResolveAlert = (alertId) => {
-  // In a real app, this would call the API.
-  // Here we just decrement the count visually for UX demonstration.
-  if (healthData.value && healthData.value.kpis.alertsCount > 0) {
-    healthData.value.kpis.alertsCount--;
+const handleResolveAlertClick = (alert) => {
+  alertToResolve.value = alert;
+  isResolveModalOpen.value = true;
+};
+
+const handleResolveSubmit = async (payload) => {
+  try {
+    // payload: { eventId, animalId, description, diagnostic, traitement, dateFin }
+    await resolveHealthAlert(payload.animalId, payload.eventId, {
+      description: payload.description,
+      diagnostic: payload.diagnostic,
+      traitement: payload.traitement,
+      dateFin: payload.dateFin
+    });
+    
+    isResolveModalOpen.value = false;
+    
+    // Refresh the dashboard to get updated KPIs and History
+    isLoading.value = true;
+    healthData.value = await getHealthDashboard();
+  } catch (error) {
+    console.error("Erreur lors de la résolution de l'alerte", error);
+    alert("Impossible de clôturer l'alerte.");
+  } finally {
+    isLoading.value = false;
   }
 };
 </script>
@@ -45,6 +81,14 @@ const handleResolveAlert = (alertId) => {
 <template>
   <div class="health-view">
     
+    <!-- Resolve Alert Modal -->
+    <ResolveAlertModal
+      :is-open="isResolveModalOpen"
+      :alert="alertToResolve"
+      @close="isResolveModalOpen = false"
+      @submit="handleResolveSubmit"
+    />
+
     <!-- Header Section -->
     <header class="page-header">
       <div class="header-titles">
@@ -55,7 +99,7 @@ const handleResolveAlert = (alertId) => {
       <div class="header-actions">
         <button class="btn-export" @click="exportReport">
           <PhDownloadSimple :size="16" weight="bold" />
-          Exporter le rapport
+          Exporter CSV
         </button>
       </div>
     </header>
@@ -77,7 +121,7 @@ const handleResolveAlert = (alertId) => {
         <HealthAlerts 
           :alerts="healthData.alerts" 
           @view-animal="handleViewAnimal"
-          @resolve-alert="handleResolveAlert"
+          @resolve-alert="handleResolveAlertClick"
         />
       </section>
 
