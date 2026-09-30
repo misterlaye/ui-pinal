@@ -3,16 +3,19 @@ import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { PhArrowLeft, PhDrop } from '@phosphor-icons/vue';
 import WorkerMilkingModal from '../components/WorkerMilkingModal.vue';
+import WorkerHealthAlertModal from '../components/WorkerHealthAlertModal.vue';
 import { getWorkerAnimalDetail, recordAnimalMilking } from '../../../services/worker_service.js';
+import { recordHealthEvent } from '../../../services/health_service.js';
 
 const router = useRouter();
 const route = useRoute();
 
 const isMilkingModalOpen = ref(false);
+const isAlertModalOpen = ref(false);
 const animal = ref(null);
 const loading = ref(true);
 
-onMounted(async () => {
+async function loadAnimal() {
   const animalId = route.params.id;
   try {
     animal.value = await getWorkerAnimalDetail(animalId);
@@ -21,7 +24,9 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
-});
+}
+
+onMounted(loadAnimal);
 
 function goBack() {
   router.back();
@@ -35,10 +40,24 @@ async function handleMilkingSubmit(data) {
       quantiteKg: data.quantity
     });
     isMilkingModalOpen.value = false;
-    onMounted(); // Refresh data
+    await loadAnimal(); // Refresh data
   } catch(err) {
     console.error("Erreur", err);
     alert("Erreur lors de l'enregistrement");
+  }
+}
+
+async function handleAlertSubmit(payload) {
+  try {
+    await recordHealthEvent(animal.value.id, {
+      description: payload.description,
+      date: new Date().toISOString()
+    });
+    isAlertModalOpen.value = false;
+    alert("Alerte envoyée au propriétaire !");
+  } catch(err) {
+    console.error("Erreur envoi alerte", err);
+    alert("Erreur lors de l'envoi de l'alerte.");
   }
 }
 </script>
@@ -51,6 +70,13 @@ async function handleMilkingSubmit(data) {
       :is-open="isMilkingModalOpen" 
       @close="isMilkingModalOpen = false"
       @submit="handleMilkingSubmit"
+    />
+
+    <!-- Health Alert Modal -->
+    <WorkerHealthAlertModal
+      :is-open="isAlertModalOpen"
+      @close="isAlertModalOpen = false"
+      @submit="handleAlertSubmit"
     />
 
     <!-- Back button -->
@@ -92,13 +118,19 @@ async function handleMilkingSubmit(data) {
         </div>
       </div>
 
-      <!-- Main Action -->
-      <button v-if="animal.isLactating" class="big-action-btn" @click="isMilkingModalOpen = true">
-        <PhDrop :size="20" weight="fill" />
-        ENREGISTRER SA TRAITE
-      </button>
-      <div v-else class="tarie-message">
-        Cet animal est actuellement tari (aucune lactation en cours).
+      <!-- Actions -->
+      <div class="action-buttons">
+        <button v-if="animal.isLactating" class="big-action-btn" @click="isMilkingModalOpen = true">
+          <PhDrop :size="20" weight="fill" />
+          ENREGISTRER SA TRAITE
+        </button>
+        <div v-else class="tarie-message">
+          Cet animal est actuellement tari (aucune lactation en cours).
+        </div>
+
+        <button class="alert-action-btn" @click="isAlertModalOpen = true">
+          Signaler un problème
+        </button>
       </div>
 
       <!-- History -->
@@ -240,7 +272,13 @@ async function handleMilkingSubmit(data) {
   font-weight: 700;
 }
 
-/* Big Action Btn */
+/* Actions */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .big-action-btn {
   background-color: var(--w-yellow);
   border: var(--w-border);
@@ -260,6 +298,25 @@ async function handleMilkingSubmit(data) {
 .big-action-btn:active {
   transform: translate(2px, 2px);
   box-shadow: 2px 2px 0px var(--w-dark);
+}
+
+.alert-action-btn {
+  background-color: #FEF2F2;
+  color: #d9534f;
+  border: 1px dashed #d9534f;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.alert-action-btn:active {
+  background-color: #FEE2E2;
 }
 
 .tarie-message {
