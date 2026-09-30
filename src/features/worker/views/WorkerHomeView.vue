@@ -13,7 +13,7 @@ const isMilkingModalOpen = ref(false);
 const homeData = ref(null);
 const user = ref(null);
 
-onMounted(async () => {
+async function loadHomeData() {
   const exploitationId = getActiveExploitation();
   if (exploitationId) {
     try {
@@ -23,7 +23,9 @@ onMounted(async () => {
       console.error(err);
     }
   }
-});
+}
+
+onMounted(loadHomeData);
 
 function go(route) {
   if (route === 'worker-milking') {
@@ -45,7 +47,7 @@ async function handleMilkingSubmit(data) {
     
     // Refresh the home data
     isMilkingModalOpen.value = false;
-    onMounted(); 
+    await loadHomeData(); 
   } catch (err) {
     console.error("Erreur lors de l'enregistrement", err);
     alert("Erreur lors de l'enregistrement de la traite.");
