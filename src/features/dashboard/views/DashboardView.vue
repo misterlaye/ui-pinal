@@ -34,10 +34,38 @@ const kpis = computed(() => {
   if (!summary.value) return [];
   const fin = summary.value.finance;
   return [
-    { label: 'Coût de revient moyen', value: fin?.coutMoyenRationParJour || '0', unit: 'FCFA / j', change: 'stable', changeDir: 'stable', note: 'Coût ration' },
-    { label: 'Prix moyen de vente', value: fin?.prixMoyenLaitParKg || '0', unit: 'FCFA / Kg', change: 'stable', changeDir: 'stable', note: 'Moyen' },
-    { label: 'CA estimé (30 jours)', value: fin?.chiffreAffairesEstimeLait30Jours || '0', unit: 'FCFA', change: 'stable', changeDir: 'stable', note: 'Estimé' },
-    { label: 'Marge estimée (30 jours)', value: fin?.margeEstimeeSurCoutAlimentaire30Jours || '0', unit: 'FCFA', change: 'stable', changeDir: 'stable', note: 'Estimée' },
+    { 
+      label: 'Coût de revient moyen', 
+      value: fin?.coutMoyenRationParJour != null ? fin.coutMoyenRationParJour : '—', 
+      unit: fin?.coutMoyenRationParJour != null ? 'FCFA / j' : '', 
+      change: 'stable', 
+      changeDir: 'stable', 
+      note: 'Coût ration' 
+    },
+    { 
+      label: 'Prix moyen de vente', 
+      value: fin?.prixMoyenLaitParKg != null ? fin.prixMoyenLaitParKg : 'Non configuré', 
+      unit: fin?.prixMoyenLaitParKg != null ? 'FCFA / L' : '', 
+      change: 'stable', 
+      changeDir: 'stable', 
+      note: 'Prix du lait' 
+    },
+    { 
+      label: 'CA estimé (30 jours)', 
+      value: fin?.chiffreAffairesEstimeLait30Jours != null ? fin.chiffreAffairesEstimeLait30Jours : 'Non configuré', 
+      unit: fin?.chiffreAffairesEstimeLait30Jours != null ? 'FCFA' : '', 
+      change: 'stable', 
+      changeDir: 'stable', 
+      note: 'Estimé' 
+    },
+    { 
+      label: 'Marge estimée (30 jours)', 
+      value: fin?.margeEstimeeSurCoutAlimentaire30Jours != null ? fin.margeEstimeeSurCoutAlimentaire30Jours : 'Non configurée', 
+      unit: fin?.margeEstimeeSurCoutAlimentaire30Jours != null ? 'FCFA' : '', 
+      change: 'stable', 
+      changeDir: 'stable', 
+      note: 'Estimée' 
+    },
   ];
 });
 
@@ -141,8 +169,6 @@ function getAnimalColor(rank) {
     <!-- Section 01 — Alerts -->
     <section class="dash-section">
       <div class="dash-section-header">
-        <span class="dash-section-num">01</span>
-        <span class="dash-section-sep">—</span>
         <span class="dash-section-title-text">ATTENTION REQUISE</span>
         <span class="dash-alert-count">{{ alerts.length }}</span>
         <span class="dash-section-desc">
@@ -198,8 +224,6 @@ function getAnimalColor(rank) {
     <!-- Section 02 — Production -->
     <section class="dash-section">
       <div class="dash-section-header">
-        <span class="dash-section-num">02</span>
-        <span class="dash-section-sep">—</span>
         <span class="dash-section-title-text">PRODUCTION</span>
       </div>
 
@@ -285,8 +309,6 @@ function getAnimalColor(rank) {
     <!-- Section 03 — Economic Indicators -->
     <section class="dash-section">
       <div class="dash-section-header">
-        <span class="dash-section-num">03</span>
-        <span class="dash-section-sep">—</span>
         <PhCurrencyCircleDollar :size="18" weight="regular" color="#C87533" />
         <span class="dash-section-title-text">Indicateurs économiques et rentabilité</span>
         <a href="#" class="dash-section-link">
