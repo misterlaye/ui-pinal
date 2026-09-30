@@ -19,7 +19,7 @@ const formatCurrency = (value) => {
     <div class="card-header">
       <div class="title-group">
         <PhListDashes :size="20" weight="bold" color="#C87533" />
-        <h3 class="card-title">Transactions récentes</h3>
+        <h3 class="card-title">Charges récentes</h3>
       </div>
       <button class="btn-link">Voir tout &rarr;</button>
     </div>
@@ -38,7 +38,7 @@ const formatCurrency = (value) => {
         <tbody>
           <tr v-for="item in transactions" :key="item.id">
             <td class="text-muted">{{ item.date }}</td>
-            <td class="font-bold">{{ item.desc }}</td>
+            <td class="font-bold">{{ item.label }}</td>
             <td class="text-muted">{{ item.category }}</td>
             <td>
               <span class="type-badge" :class="item.type === 'REVENU' ? 'badge-revenu' : 'badge-charge'">

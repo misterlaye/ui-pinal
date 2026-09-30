@@ -7,27 +7,58 @@ import FinanceKPIs from '../components/FinanceKPIs.vue';
 import FinanceCharts from '../components/FinanceCharts.vue';
 import FinanceRentabilityBar from '../components/FinanceRentabilityBar.vue';
 import FinanceTransactions from '../components/FinanceTransactions.vue';
+import CreateChargeModal from '../components/CreateChargeModal.vue';
+import SetPrixVenteModal from '../components/SetPrixVenteModal.vue';
 
 const financeData = ref(null);
 const isLoading = ref(true);
+const missingPriceError = ref(false);
+const showChargeModal = ref(false);
+const showPriceModal = ref(false);
 
-onMounted(async () => {
+const loadData = async () => {
+  isLoading.value = true;
+  missingPriceError.value = false;
   try {
     const data = await getFinanceDashboard();
     financeData.value = data;
   } catch (error) {
-    console.error("Erreur de chargement des données financières", error);
+    if (error.response && error.response.status === 422) {
+      missingPriceError.value = true;
+    } else {
+      console.error("Erreur de chargement des données financières", error);
+    }
   } finally {
     isLoading.value = false;
   }
+};
+
+onMounted(() => {
+  loadData();
 });
 
 const exportReport = () => {
-  alert("Génération du rapport financier en cours...");
+  if (!financeData.value) return;
+  const rows = [
+    ['Date', 'Description', 'Categorie', 'Type', 'Montant'],
+    ...(financeData.value.transactions || []).map(t => [t.date, t.label, t.category, t.type, t.amount])
+  ];
+  const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(";")).join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `rapport_financier_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 const newTransaction = () => {
-  alert("Ouverture du formulaire de transaction...");
+  showChargeModal.value = true;
+};
+
+const openPriceModal = () => {
+  showPriceModal.value = true;
 };
 </script>
 
@@ -42,13 +73,16 @@ const newTransaction = () => {
       </div>
       
       <div class="header-actions">
+        <button class="btn-secondary" @click="openPriceModal" title="Prix de vente du lait">
+          Prix du lait
+        </button>
         <button class="btn-secondary" @click="exportReport">
           <PhDownloadSimple :size="16" weight="bold" />
-          Exporter le rapport
+          Exporter CSV
         </button>
         <button class="btn-primary" @click="newTransaction">
           <PhPlus :size="16" weight="bold" />
-          Nouvelle transaction
+          Nouvelle charge
         </button>
       </div>
     </header>
@@ -56,6 +90,15 @@ const newTransaction = () => {
     <!-- Main Content -->
     <div v-if="isLoading" class="loading-state">
       Chargement du module financier...
+    </div>
+    
+    <div v-else-if="missingPriceError" class="error-state">
+      <div class="error-card">
+        <h3>Configuration requise</h3>
+        <p>Impossible de calculer le chiffre d'affaires et la rentabilité.</p>
+        <p>Veuillez configurer un <strong>prix de vente du lait</strong> pour la période en cours.</p>
+        <button class="btn-primary mt-4" @click="openPriceModal">Configurer le prix du lait</button>
+      </div>
     </div>
 
     <div v-else-if="financeData" class="dashboard-content">
@@ -84,6 +127,19 @@ const newTransaction = () => {
       </section>
 
     </div>
+
+    <!-- Modals -->
+    <CreateChargeModal 
+      :show="showChargeModal" 
+      @close="showChargeModal = false" 
+      @charge-created="loadData" 
+    />
+
+    <SetPrixVenteModal
+      :show="showPriceModal"
+      @close="showPriceModal = false"
+      @price-created="loadData"
+    />
 
   </div>
 </template>
@@ -178,6 +234,37 @@ const newTransaction = () => {
   justify-content: center;
   padding: 80px 0;
   color: var(--text-muted);
+}
+
+.error-state {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.error-card {
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  text-align: center;
+  max-width: 400px;
+}
+
+.error-card h3 {
+  color: #EF4444;
+  margin-top: 0;
+}
+
+.error-card p {
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.mt-4 {
+  margin-top: 16px;
+  justify-content: center;
+  width: 100%;
 }
 
 /* Responsive */
