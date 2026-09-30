@@ -26,6 +26,7 @@ const form = ref({
   dateNaissance: '',
   mereId: '',
   pereIdentifiant: '',
+  sexe: 'INCONNU',
 });
 
 const errors = ref({});
@@ -72,6 +73,7 @@ watch(
           dateNaissance: props.animal.dateNaissance || '',
           mereId: props.animal.mereId || '',
           pereIdentifiant: props.animal.pereIdentifiant || '',
+          sexe: props.animal.sexe || 'INCONNU',
         };
       } else {
         title.value = 'Ajouter un animal';
@@ -83,6 +85,7 @@ watch(
           dateNaissance: '',
           mereId: '',
           pereIdentifiant: '',
+          sexe: 'INCONNU',
         };
       }
       errors.value = {};
@@ -147,16 +150,15 @@ const handleSave = async () => {
 
       <div class="form-row">
         <div class="form-group flex-1">
-          <label class="pn-label">Race</label>
+          <label class="pn-label">Sexe</label>
           <div class="select-wrapper">
-            <select v-model="form.raceId" class="pn-select">
-              <option v-for="race in races" :key="race.id" :value="race.id">
-                {{ race.libelle }}
-              </option>
+            <select v-model="form.sexe" class="pn-select">
+              <option value="INCONNU">Inconnu</option>
+              <option value="FEMELLE">Femelle</option>
+              <option value="MALE">Mâle</option>
             </select>
           </div>
         </div>
-
         <div class="form-group flex-1">
           <label class="pn-label">Statut actuel</label>
           <div class="select-wrapper">
@@ -169,15 +171,30 @@ const handleSave = async () => {
         </div>
       </div>
 
-      <div class="form-group">
-        <label class="pn-label">Date de naissance</label>
-        <input
-          type="date"
-          id="dateNaissance"
-          v-model="form.dateNaissance"
-          class="pn-select"
-        />
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label class="pn-label">Race</label>
+          <div class="select-wrapper">
+            <select v-model="form.raceId" class="pn-select">
+              <option v-for="race in races" :key="race.id" :value="race.id">
+                {{ race.libelle }}
+              </option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group flex-1">
+          <label class="pn-label">Date de naissance</label>
+          <input
+            type="date"
+            id="dateNaissance"
+            v-model="form.dateNaissance"
+            class="pn-select"
+          />
+        </div>
       </div>
+
+
 
       <div class="form-row">
         <div class="form-group flex-1">

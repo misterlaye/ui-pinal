@@ -65,10 +65,14 @@ onMounted(() => {
 
 const handleInsemination = async () => {
   try {
+    const isIA = inseminationForm.value.methodeReproduction === 'INSEMINATION_ARTIFICIELLE';
     const payload = {
-      ...inseminationForm.value,
       animalId: props.animalId,
-      exploitationId: getActiveExploitation()
+      exploitationId: getActiveExploitation(),
+      dateInsemination: inseminationForm.value.dateInsemination,
+      methodeReproduction: inseminationForm.value.methodeReproduction,
+      codePaillette: isIA ? (inseminationForm.value.identifiantTaureau || null) : null,
+      taureauId: (!isIA && inseminationForm.value.identifiantTaureau) ? inseminationForm.value.identifiantTaureau : null
     };
     await declarerInsemination(payload);
     showInseminationModal.value = false;
@@ -180,19 +184,19 @@ const getStatusColor = (status) => {
         </div>
 
         <!-- Constat Step -->
-        <div class="timeline-step" :class="{ 'completed': activeCycle.constatResultat }">
+        <div class="timeline-step" :class="{ 'completed': activeCycle.constats && activeCycle.constats.length > 0 }">
           <div class="step-icon"><PhCalendarCheck weight="bold"/></div>
           <div class="step-content">
             <h4>Constat de Gestation</h4>
-            <div v-if="!activeCycle.constatResultat && activeCycle.statut === 'EN_ATTENTE_CONSTAT'">
+            <div v-if="!(activeCycle.constats && activeCycle.constats.length > 0) && activeCycle.statut === 'EN_ATTENTE_CONSTAT'">
               <PnButton variant="secondary" @click="showConstatModal = true" class="action-btn">
                 Saisir le constat
               </PnButton>
             </div>
-            <div v-else-if="activeCycle.constatResultat">
-              <p>{{ activeCycle.constatDate }}</p>
-              <p class="meta" :class="{'text-success': activeCycle.constatResultat === 'POSITIF', 'text-error': activeCycle.constatResultat === 'NEGATIF'}">
-                Résultat: {{ activeCycle.constatResultat }}
+            <div v-else-if="activeCycle.constats && activeCycle.constats.length > 0">
+              <p>{{ activeCycle.constats[activeCycle.constats.length - 1].date }}</p>
+              <p class="meta" :class="{'text-success': activeCycle.constats[activeCycle.constats.length - 1].resultat === 'POSITIF', 'text-error': activeCycle.constats[activeCycle.constats.length - 1].resultat === 'NEGATIF'}">
+                Résultat: {{ activeCycle.constats[activeCycle.constats.length - 1].resultat }}
               </p>
             </div>
           </div>

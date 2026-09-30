@@ -5,14 +5,20 @@ const mapAnimal = (backendData) => {
   return {
     id: backendData.id,
     name: backendData.nom,
+    nom: backendData.nom,
     identifiant: backendData.identifiant,
     raceId: backendData.raceId,
     status: backendData.statut,
+    statut: backendData.statut,
     trend: null, // Sera implémenté dans la phase production/santé
     dateNaissance: backendData.dateNaissance,
     age: backendData.dateNaissance ? calculateAge(backendData.dateNaissance) : 'N/A',
-    lastEvent: 'Aucun événement récent', // MOCK
+    stat1Label: 'Identifiant',
+    stat1Value: '#' + backendData.identifiant,
+    lastEvent: 'Aucun événement récent',
     avatar: backendData.photoUrl || defaultCow,
+    exploitationId: backendData.exploitationId,
+    sexe: backendData.sexe,
   };
 };
 
@@ -36,14 +42,15 @@ export async function getAnimalsList(exploitationId) {
  */
 export async function createAnimal(animalData) {
   const payload = {
-    exploitationId: localStorage.getItem('active_exploitation_id'),
+    exploitationId: animalData.exploitationId || localStorage.getItem('active_exploitation_id'),
     raceId: animalData.raceId,
     identifiant: animalData.identifiant,
     nom: animalData.nom || animalData.name,
-    photoUrl: null,
+    photoUrl: animalData.photoUrl || null,
     dateNaissance: animalData.dateNaissance || null,
     mereId: animalData.mereId || null,
-    pereIdentifiant: animalData.pereIdentifiant || null
+    pereIdentifiant: animalData.pereIdentifiant || null,
+    sexe: animalData.sexe || 'INCONNU'
   };
   const { data } = await apiClient.post('/animals', payload);
   return mapAnimal(data);
@@ -68,7 +75,8 @@ export async function updateAnimal(animalId, animalData) {
     photoUrl: null,
     dateNaissance: animalData.dateNaissance || null,
     mereId: animalData.mereId || null,
-    pereIdentifiant: animalData.pereIdentifiant || null
+    pereIdentifiant: animalData.pereIdentifiant || null,
+    sexe: animalData.sexe || 'INCONNU'
   };
   const { data } = await apiClient.patch(`/animals/${animalId}`, payload);
   return mapAnimal(data);
@@ -95,5 +103,13 @@ export async function deleteAnimal(animalId) {
  */
 export async function declareSortie(animalId, payload) {
   const { data } = await apiClient.post(`/animals/${animalId}/sortie`, payload);
+  return data;
+}
+
+/**
+ * Récupère les races.
+ */
+export async function getRaces() {
+  const { data } = await apiClient.get('/races');
   return data;
 }

@@ -6,6 +6,7 @@ import { PhBell, PhCaretDown, PhCalendarBlank, PhList, PhX } from '@phosphor-ico
 const navItems = [
   { label: 'Dashboard', route: '/dashboard' },
   { label: 'Troupeau', route: '/dashboard/troupeau' },
+  { label: 'Reproduction', route: '/dashboard/reproduction' },
   { label: 'Production', route: '/dashboard/production' },
   { label: 'Santé', route: '/dashboard/sante' },
   { label: 'Nutrition', route: '/dashboard/nutrition' },

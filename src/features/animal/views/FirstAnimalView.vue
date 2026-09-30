@@ -60,6 +60,7 @@ async function handleSubmit() {
       raceId: state.animalRaceId || defaultRaceId,
       identifiant: state.animalIdentifiant.trim(),
       nom: state.animalNom.trim(),
+      sexe: 'INCONNU',
       photoUrl: state.animalPhotoUrl || null,
       dateNaissance: state.animalDateNaissance || null,
     });

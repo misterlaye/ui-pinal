@@ -91,6 +91,11 @@ const routes = [
         component: () => import('../features/health/views/HealthView.vue'),
       },
       {
+        path: 'reproduction',
+        name: 'dashboard-reproduction',
+        component: () => import('../features/reproduction/views/ReproductionView.vue'),
+      },
+      {
         path: 'nutrition',
         name: 'dashboard-nutrition',
         component: () => import('../features/nutrition/views/NutritionView.vue'),
