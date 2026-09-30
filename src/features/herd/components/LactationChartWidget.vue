@@ -64,16 +64,11 @@ onMounted(async () => {
   try {
     const data = await getLactationCurve(props.lactationId);
     
-    // Si pas de données, on affiche un graph vide ou mocké
     if (!data || data.length === 0) {
+      // Si pas de données, on affiche un graph vide
       chartData.value = {
-        labels: ['J1', 'J2', 'J3', 'J4', 'J5', 'J6', 'J7'],
-        datasets: [{
-          label: 'Production (L)',
-          backgroundColor: '#C87533',
-          borderColor: '#C87533',
-          data: [12, 14, 15, 14, 16, 18, 17]
-        }]
+        labels: [],
+        datasets: []
       };
     } else {
       chartData.value = {
@@ -99,8 +94,11 @@ onMounted(async () => {
     <div class="widget-header">
       <span class="widget-title">COURBE DE LACTATION</span>
     </div>
-    <div class="chart-container" v-if="isLoaded">
+    <div class="chart-container" v-if="isLoaded && chartData.datasets.length > 0">
       <Line :data="chartData" :options="chartOptions" />
+    </div>
+    <div v-else-if="isLoaded" class="empty-state">
+      Aucune donnée de traite pour cette lactation.
     </div>
     <div v-else class="loading">Chargement du graphique...</div>
   </div>

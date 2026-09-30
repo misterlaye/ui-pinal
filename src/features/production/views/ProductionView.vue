@@ -25,7 +25,19 @@ onMounted(async () => {
 });
 
 const exportReport = () => {
-  alert("Génération du rapport PDF en cours...");
+  if (!productionData.value) return;
+  const rows = [
+    ['Animal', 'Race', 'Matin (kg)', 'Soir (kg)', 'Total (kg)'],
+    ...(productionData.value.animalProduction || []).map(a => [a.name, a.race, a.matin, a.soir, a.total])
+  ];
+  const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(";")).join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `production_laitiere_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 </script>
 
@@ -40,13 +52,13 @@ const exportReport = () => {
       </div>
       
       <div class="header-actions">
-        <button class="btn-saisie" @click="router.push({ name: 'worker-saisie-lot' })">
+        <!-- <button class="btn-saisie" @click="router.push({ name: 'worker-saisie-lot' })">
           <PhListPlus :size="16" weight="bold" />
           Saisie par lot
-        </button>
+        </button> -->
         <button class="btn-export" @click="exportReport">
           <PhDownloadSimple :size="16" weight="bold" />
-          Exporter le rapport
+          Exporter CSV
         </button>
       </div>
     </header>

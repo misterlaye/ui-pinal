@@ -39,3 +39,18 @@ export const tarirLactation = async (animalId) => {
   const { data } = await apiClient.post(`/lactations/animals/${animalId}/tarir`);
   return data;
 };
+
+export const getActiveLactation = async (animalId) => {
+  try {
+    const { data } = await apiClient.get(`/lactations/animals/${animalId}/active`);
+    return data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const getMilkAnalyses = async (lactationId) => {
+  const { data } = await apiClient.get(`/lactations/${lactationId}/analyses`);
+  return data;
+};
+

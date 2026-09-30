@@ -13,7 +13,7 @@ import {
   PhCurrencyCircleDollar,
 } from '@phosphor-icons/vue';
 import { getDashboardSummary, getDashboardAnomalies } from '../../../services/dashboard_service.js';
-
+import { getProductionSummary } from '../../../services/production_service.js';
 
 const userName = ref(localStorage.getItem('user_prenom') || 'M. Diallo');
 const exploitationName = ref(localStorage.getItem('exploitation_name') || 'Mon exploitation');
@@ -24,16 +24,11 @@ const isLoading = ref(true);
 const error = ref(null);
 
 const productionTotal = computed(() => summary.value?.production?.kgDerniers7Jours || 0);
-const productionChange = ref('+0%'); // Missing from backend, mock or calculate
-const productionLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-const productionData = [95, 110, 105, 130, 125, 140, 142]; // No daily breakdown in backend summary
+const productionChange = ref('+0%');
+const productionLabels = ref(['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']);
+const productionData = ref([0, 0, 0, 0, 0, 0, 0]);
 
-const topAnimals = ref([
-  { rank: 1, name: 'Awa', race: 'Montbéliarde', litres: 18.5, trend: 'up' },
-  { rank: 2, name: 'Nafi', race: 'Montbéliarde', litres: 16.2, trend: 'up' },
-  { rank: 3, name: 'Diara', race: 'Gudali', litres: 14, trend: 'down' },
-  { rank: 4, name: 'Fatou', race: 'Gudali', litres: 12.8, trend: 'up' },
-]);
+const topAnimals = ref([]);
 
 const kpis = computed(() => {
   if (!summary.value) return [];
@@ -62,11 +57,28 @@ const herd = computed(() => {
 onMounted(async () => {
   try {
     isLoading.value = true;
-    const [summaryData, anomaliesData] = await Promise.all([
+    const [summaryData, anomaliesData, prodData] = await Promise.all([
       getDashboardSummary(),
-      getDashboardAnomalies()
+      getDashboardAnomalies(),
+      getProductionSummary().catch(() => null)
     ]);
     summary.value = summaryData;
+
+    if (prodData) {
+      if (prodData.chartData?.labels?.length) {
+        productionLabels.value = prodData.chartData.labels;
+        productionData.value = prodData.chartData.currentWeek;
+      }
+      if (prodData.animalProduction?.length) {
+        topAnimals.value = prodData.animalProduction.slice(0, 4).map((a, idx) => ({
+          rank: idx + 1,
+          name: a.name,
+          race: a.race || 'Non spécifiée',
+          litres: a.total,
+          trend: a.trend >= 0 ? 'up' : 'down'
+        }));
+      }
+    }
     
     alerts.value = anomaliesData.map((ano, index) => ({
       id: index,
@@ -228,7 +240,7 @@ function getAnimalColor(rank) {
             <span class="rankings-badge">LACTATION</span>
           </div>
 
-          <div class="rankings-list">
+          <div class="rankings-list" v-if="topAnimals.length > 0">
             <div
               v-for="animal in topAnimals"
               :key="animal.rank"
@@ -262,6 +274,9 @@ function getAnimalColor(rank) {
                 />
               </div>
             </div>
+          </div>
+          <div v-else style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
+            Aucune traite enregistrée pour le moment.
           </div>
         </div>
       </div>

@@ -1,8 +1,8 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { PhDrop, PhWarning } from '@phosphor-icons/vue';
+import { getMilkAnalyses } from '../../../services/production_service.js';
 
-// On simule pour le moment. Dans une vraie implémentation, on props les analyses
 const props = defineProps({
   lactationId: {
     type: String,
@@ -10,24 +10,47 @@ const props = defineProps({
   }
 });
 
-const analyses = ref({
-  dateDerniereAnalyse: '15 MAR 2026',
-  tauxButyreux: 38.5, // g/L
-  tauxProteique: 32.1, // g/L
-  cellulesSomatiques: 150 // 1000/mL
-});
+const analyses = ref(null);
+const isLoading = ref(true);
 
-const isCCSWarning = analyses.value.cellulesSomatiques > 250;
+const loadAnalyses = async () => {
+  if (!props.lactationId) return;
+  isLoading.value = true;
+  try {
+    const list = await getMilkAnalyses(props.lactationId);
+    if (list && list.length > 0) {
+      analyses.value = {
+        dateDerniereAnalyse: list[0].dateAnalyse,
+        tauxButyreux: list[0].tauxButyreux != null ? list[0].tauxButyreux : '--',
+        tauxProteique: list[0].tauxProteique != null ? list[0].tauxProteique : '--',
+        cellulesSomatiques: list[0].cellulesSomatiques != null ? list[0].cellulesSomatiques : '--'
+      };
+    } else {
+      analyses.value = null;
+    }
+  } catch (e) {
+    analyses.value = null;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+watch(() => props.lactationId, loadAnalyses);
+onMounted(loadAnalyses);
+
+const isCCSWarning = computed(() => {
+  return analyses.value && analyses.value.cellulesSomatiques !== '--' && analyses.value.cellulesSomatiques > 250;
+});
 </script>
 
 <template>
   <div class="qualite-widget">
     <div class="widget-header">
       <span class="widget-title">QUALITÉ DU LAIT</span>
-      <span class="analyse-date">Dernière analyse : {{ analyses.dateDerniereAnalyse }}</span>
+      <span class="analyse-date" v-if="analyses">Dernière analyse : {{ analyses.dateDerniereAnalyse }}</span>
     </div>
 
-    <div class="metrics-grid">
+    <div class="metrics-grid" v-if="analyses">
       <div class="metric-item">
         <span class="metric-val">{{ analyses.tauxButyreux }}</span>
         <span class="metric-label">TB (g/L)</span>
@@ -44,6 +67,9 @@ const isCCSWarning = analyses.value.cellulesSomatiques > 250;
         </div>
         <span class="metric-label">Cellules (x1000/mL)</span>
       </div>
+    </div>
+    <div v-else class="empty-state" style="font-size: 13px; color: var(--text-muted); padding: 8px 0;">
+      Aucune analyse de lait enregistrée pour cette lactation.
     </div>
   </div>
 </template>
