@@ -2,14 +2,16 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { PhArrowLeft, PhCow } from '@phosphor-icons/vue';
-import { getAnimal, declareSortie } from '../../../services/animal_service.js';
+import { getAnimal, declareSortie, getRaces } from '../../../services/animal_service.js';
 import { getWorkerAnimalDetail } from '../../../services/worker_service.js';
-import { tarirLactation } from '../../../services/production_service.js';
+import { tarirLactation, getActiveLactation } from '../../../services/production_service.js';
 import CycleReproductionWidget from '../components/CycleReproductionWidget.vue';
 import SortieAnimalModal from '../components/SortieAnimalModal.vue';
 import LactationChartWidget from '../components/LactationChartWidget.vue';
 import QualiteLaitWidget from '../components/QualiteLaitWidget.vue';
 import RationWidget from '../../nutrition/components/RationWidget.vue';
+import HealthEventModal from '../../health/components/HealthEventModal.vue';
+import { recordHealthEvent, getAnimalHealthEvents } from '../../../services/health_service.js';
 import defaultCow from '../../../assets/images/default_cow.jpg';
 
 const route = useRoute();
@@ -17,6 +19,8 @@ const router = useRouter();
 const animal = ref(null);
 const isLoading = ref(true);
 const showSortieModal = ref(false);
+const showHealthModal = ref(false);
+const activeLactationId = ref(null);
 
 // Nouvelles données simulées pour la fiche
 const ficheData = ref(null);
@@ -31,35 +35,88 @@ onMounted(async () => {
       animal.value = {
         id: animalId,
         name: 'Bella',
-        race: "Prim'Holstein",
+        raceId: null,
         status: 'lactation',
         identifiant: 'FR-4471-0932',
         avatar: defaultCow
       };
     }
 
+    try {
+      const races = await getRaces();
+      if (animal.value.raceId) {
+        const foundRace = races.find(r => r.id === animal.value.raceId);
+        animal.value.race = foundRace ? (foundRace.libelle || foundRace.nom) : "Race Inconnue";
+      } else {
+        animal.value.race = "Race Inconnue";
+      }
+    } catch (e) {
+      console.warn("Could not fetch races", e);
+      animal.value.race = "Race Inconnue";
+    }
+
+    try {
+      const activeLact = await getActiveLactation(animalId);
+      if (activeLact && activeLact.id) {
+        activeLactationId.value = activeLact.id;
+      }
+    } catch (e) {
+      console.warn("Could not fetch active lactation", e);
+    }
+
     // On initialise avec des données vides en attendant l'implémentation des phases 4 (Nutrition) et 5 (Santé)
     let prodJour = '--';
     let isLactating = false;
+    let joursLactation = '--';
     try {
       const detail = await getWorkerAnimalDetail(animalId);
-      if (detail && detail.lastMilkingVolume) {
-        prodJour = detail.lastMilkingVolume;
+      if (detail && detail.lastMilkingVolume && detail.lastMilkingVolume !== '-') {
+        prodJour = detail.lastMilkingVolume.replace(' L', '');
       }
       if (detail && detail.isLactating) {
         isLactating = detail.isLactating;
       }
+      if (detail && detail.joursLactation !== undefined) {
+        joursLactation = detail.isLactating ? detail.joursLactation : '--';
+      }
     } catch (e) {
-      console.warn("Could not fetch production detail");
+      console.warn("Could not fetch production detail", e);
+    }
+
+    let healthEvents = [];
+    try {
+      const events = await getAnimalHealthEvents(animalId);
+      healthEvents = events.map(ev => {
+        const dt = new Date(ev.dateHeure);
+        const day = dt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+        const time = dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        
+        let desc = ev.description;
+        if (ev.traitement) desc += ` : ${ev.traitement}`;
+
+        const isVac = ev.description.toLowerCase().includes('vaccin');
+        
+        return {
+          id: ev.id,
+          date: day,
+          time: time,
+          desc: desc,
+          color: isVac ? '#059669' : '#D97706',
+          type: 'solid',
+          isRecommendation: false
+        };
+      });
+    } catch(e) {
+      console.warn("Could not fetch health events", e);
     }
 
     ficheData.value = {
-      localisation: 'Par défaut (Phase 4)',
-      joursLactation: 'Calcule (Phase 3)',
+      localisation: 'Standard',
+      joursLactation: joursLactation,
       productionJour: prodJour,
       isLactating: isLactating,
-      poids: '-- (Phase 4)',
-      events: []
+      poids: '--',
+      events: healthEvents
     };
 
   } catch (error) {
@@ -97,6 +154,35 @@ const handleTarir = async () => {
   }
 };
 
+const handleHealthSubmit = async (payload) => {
+  try {
+    await recordHealthEvent(animal.value.id, payload);
+    showHealthModal.value = false;
+    alert("Événement sanitaire enregistré avec succès !");
+    // Refresh events from server to keep them consistent
+    try {
+      const events = await getAnimalHealthEvents(animal.value.id);
+      ficheData.value.events = events.map(ev => {
+        const dt = new Date(ev.dateHeure);
+        return {
+          id: ev.id,
+          date: dt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
+          time: dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          desc: ev.description + (ev.traitement ? ' : ' + ev.traitement : ''),
+          color: ev.description.toLowerCase().includes('vaccin') ? '#059669' : '#D97706',
+          type: 'solid',
+          isRecommendation: false
+        };
+      });
+    } catch(e) {
+      console.warn("Failed to refresh health events", e);
+    }
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement de l'événement sanitaire:", error);
+    alert("Erreur lors de l'enregistrement.");
+  }
+};
+
 </script>
 
 <template>
@@ -110,6 +196,9 @@ const handleTarir = async () => {
       </button>
 
       <div style="display: flex; gap: 12px;">
+        <button class="btn-health" @click="showHealthModal = true">
+          + Événement Santé
+        </button>
         <button class="btn-tarir" @click="handleTarir" v-if="ficheData.isLactating">
           Déclarer un tarissement
         </button>
@@ -187,8 +276,8 @@ const handleTarir = async () => {
         <CycleReproductionWidget :animalId="animal.id" />
 
         <!-- Production Avancée (Phase 3) -->
-        <LactationChartWidget :lactationId="animal.id" />
-        <QualiteLaitWidget :lactationId="animal.id" />
+        <LactationChartWidget v-if="activeLactationId" :lactationId="activeLactationId" />
+        <QualiteLaitWidget v-if="activeLactationId" :lactationId="activeLactationId" />
 
         <!-- Section Timeline -->
         <div class="timeline-section">
@@ -235,6 +324,13 @@ const handleTarir = async () => {
       :animalId="animal.id"
       @submit="handleSortieSubmit"
     />
+
+    <!-- Modale de Santé -->
+    <HealthEventModal
+      v-model:isOpen="showHealthModal"
+      :animalId="animal.id"
+      @submit="handleHealthSubmit"
+    />
   </div>
   
   <div v-else-if="isLoading" class="loading-state">
@@ -271,6 +367,22 @@ const handleTarir = async () => {
 }
 
 .btn-sortie:hover {
+  opacity: 0.9;
+}
+
+.btn-health {
+  background-color: #059669;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: opacity var(--transition-fast);
+}
+
+.btn-health:hover {
   opacity: 0.9;
 }
 
