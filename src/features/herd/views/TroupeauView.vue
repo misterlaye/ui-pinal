@@ -5,7 +5,7 @@ import DonutChart from '../components/DonutChart.vue';
 import AnimalFormDrawer from '../components/AnimalFormDrawer.vue';
 import PnModal from '../../../components/ui/PnModal.vue';
 import PnButton from '../../../components/ui/PnButton.vue';
-import { getAnimalsList, createAnimal, updateAnimal, deleteAnimal } from '../../../services/animal_service.js';
+import { getAnimalsList, createAnimal, updateAnimal, changeAnimalStatus, deleteAnimal } from '../../../services/animal_service.js';
 import {
   PhPlus,
   PhMagnifyingGlass,
@@ -67,6 +67,11 @@ const handleSaveAnimal = async (animalData) => {
     let savedAnimal;
     if (selectedAnimal.value) {
       savedAnimal = await updateAnimal(selectedAnimal.value.id, animalData);
+      if (animalData.status && animalData.status !== selectedAnimal.value.status) {
+        await changeAnimalStatus(selectedAnimal.value.id, animalData.status);
+        savedAnimal.status = animalData.status;
+        savedAnimal.statut = animalData.status;
+      }
     } else {
       savedAnimal = await createAnimal(animalData);
     }
