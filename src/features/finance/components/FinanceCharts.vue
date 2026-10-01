@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { PhChartBar, PhChartPieSlice } from '@phosphor-icons/vue';
+import { PhChartBar, PhChartPieSlice, PhChartLine } from '@phosphor-icons/vue';
 import { Bar, Pie } from 'vue-chartjs';
 import {
   Chart as ChartJS,
@@ -32,6 +32,38 @@ const props = defineProps({
     type: Object,
     required: true
   }
+});
+
+// Check if data is empty
+const isRevenueEmpty = computed(() => {
+  if (!props.revenueData || !props.revenueData.revenues || !props.revenueData.charges) {
+    return true;
+  }
+  return props.revenueData.revenues.every(v => v === 0) && 
+         props.revenueData.charges.every(v => v === 0);
+});
+
+const isRepartitionEmpty = computed(() => {
+  if (!props.repartitionData || !props.repartitionData.data) {
+    return true;
+  }
+  return props.repartitionData.data.length === 0 || 
+         props.repartitionData.data.every(v => v === 0);
+});
+
+// Calculate total charges for donut center
+const totalCharges = computed(() => {
+  if (!props.repartitionData || !props.repartitionData.data) return 0;
+  return props.repartitionData.data.reduce((sum, val) => sum + val, 0);
+});
+
+const formattedTotal = computed(() => {
+  return new Intl.NumberFormat('fr-FR', { 
+    style: 'currency', 
+    currency: 'XOF', 
+    notation: 'compact',
+    maximumFractionDigits: 0
+  }).format(totalCharges.value);
 });
 
 // Bar Chart Configuration
@@ -133,12 +165,14 @@ const pieChartData = computed(() => ({
   ]
 }));
 
-const pieChartOptions = {
+const isMobile = computed(() => window.innerWidth < 768);
+
+const pieChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: 'right',
+      position: isMobile.value ? 'bottom' : 'right',
       labels: {
         usePointStyle: true,
         boxWidth: 8,
@@ -165,7 +199,7 @@ const pieChartOptions = {
     }
   },
   cutout: '60%' // Make it a donut chart
-};
+}));
 </script>
 
 <template>
@@ -180,7 +214,13 @@ const pieChartOptions = {
         </div>
       </div>
       <div class="chart-container bar-container">
-        <Bar :data="barChartData" :options="barChartOptions" />
+        <!-- Empty State -->
+        <div v-if="isRevenueEmpty" class="chart-empty-state">
+          <PhChartLine :size="48" color="#D1D5DB" weight="light" />
+          <p class="empty-message">Aucune donnée financière disponible</p>
+        </div>
+        <!-- Chart -->
+        <Bar v-else :data="barChartData" :options="barChartOptions" />
       </div>
     </div>
 
@@ -193,12 +233,20 @@ const pieChartOptions = {
         </div>
       </div>
       <div class="chart-container pie-container">
-        <Pie :data="pieChartData" :options="pieChartOptions" />
-        <!-- Custom Center Label -->
-        <div class="donut-center-label">
-          <span class="total-label">Total</span>
-          <span class="total-value">508k FCFA</span>
+        <!-- Empty State -->
+        <div v-if="isRepartitionEmpty" class="chart-empty-state">
+          <PhChartLine :size="48" color="#D1D5DB" weight="light" />
+          <p class="empty-message">Aucune répartition disponible</p>
         </div>
+        <!-- Chart -->
+        <template v-else>
+          <Pie :data="pieChartData" :options="pieChartOptions" />
+          <!-- Custom Center Label -->
+          <div class="donut-center-label">
+            <span class="total-label">Total</span>
+            <span class="total-value">{{ formattedTotal }}</span>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -248,14 +296,29 @@ const pieChartOptions = {
 }
 
 .bar-container {
-  height: 300px;
+  height: clamp(200px, 40vh, 300px);
 }
 
 .pie-container {
-  height: 300px;
+  height: clamp(200px, 40vh, 300px);
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.chart-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+}
+
+.empty-message {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .donut-center-label {
@@ -288,6 +351,13 @@ const pieChartOptions = {
   
   .donut-center-label {
     left: 50%;
+  }
+}
+
+@media (max-width: 768px) {
+  .bar-container,
+  .pie-container {
+    height: clamp(240px, 50vh, 300px);
   }
 }
 </style>

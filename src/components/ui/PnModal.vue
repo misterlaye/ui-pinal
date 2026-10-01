@@ -104,8 +104,10 @@ onUnmounted(() => {
   border-radius: var(--radius-lg);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   width: 100%;
+  max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
@@ -139,6 +141,8 @@ onUnmounted(() => {
 
 .modal-content {
   padding: 24px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .modal-footer {
@@ -171,5 +175,24 @@ onUnmounted(() => {
 .modal-scale-leave-to {
   opacity: 0;
   transform: scale(0.95);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .modal-wrapper {
+    padding: 16px;
+  }
+  
+  .modal-header {
+    padding: 16px 20px;
+  }
+  
+  .modal-content {
+    padding: 20px;
+  }
+  
+  .modal-footer {
+    padding: 12px 20px;
+  }
 }
 </style>

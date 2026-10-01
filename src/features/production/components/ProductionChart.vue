@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Line } from 'vue-chartjs';
+import { PhChartLine } from '@phosphor-icons/vue';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
@@ -10,6 +11,14 @@ const props = defineProps({
     type: Object,
     required: true
   }
+});
+
+const isEmpty = computed(() => {
+  if (!props.chartData || !props.chartData.labels || !props.chartData.currentWeek) {
+    return true;
+  }
+  return props.chartData.labels.length === 0 || 
+         props.chartData.currentWeek.every(val => val === 0);
 });
 
 const chartOptions = {
@@ -114,8 +123,15 @@ const formattedChartData = computed(() => {
     </div>
     
     <div class="chart-container">
-      <Line :data="formattedChartData" :options="chartOptions" />
-      <div class="y-axis-label">Litres</div>
+      <!-- Empty State -->
+      <div v-if="isEmpty" class="chart-empty-state">
+        <PhChartLine :size="48" color="#D1D5DB" weight="light" />
+        <p class="empty-message">Aucune donnée de production disponible</p>
+      </div>
+      
+      <!-- Chart -->
+      <Line v-else :data="formattedChartData" :options="chartOptions" />
+      <div v-if="!isEmpty" class="y-axis-label">Litres</div>
     </div>
   </div>
 </template>
@@ -190,8 +206,23 @@ const formattedChartData = computed(() => {
 
 /* Chart Container */
 .chart-container {
-  height: 350px;
+  height: clamp(200px, 40vh, 350px);
   position: relative;
+}
+
+.chart-empty-state {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.empty-message {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .y-axis-label {

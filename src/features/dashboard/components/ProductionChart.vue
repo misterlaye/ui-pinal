@@ -117,7 +117,7 @@ const chartOptions = {
 <style scoped>
 .production-chart {
   width: 100%;
-  height: 240px;
+  height: clamp(200px, 30vh, 240px);
   position: relative;
 }
 

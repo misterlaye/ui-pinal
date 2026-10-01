@@ -22,4 +22,11 @@ defineProps({
   0%, 100% { background-position: 0% 0%; }
   50% { background-position: 100% 0%; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-text {
+    animation: none;
+    background: #E5E7EB;
+  }
+}
 </style>
