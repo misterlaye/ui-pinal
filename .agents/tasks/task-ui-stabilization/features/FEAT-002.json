@@ -1,0 +1,35 @@
+{
+  "id": "FEAT-002",
+  "type": "fix",
+  "description": "Gestion erreurs API — Affichage ErrorBanner, retry, suppression mock silencieux production_service, correction données par défaut Dashboard.",
+  "status": "pending",
+  "steps": [
+    "Lire context.json et plan ui-plan.md section PHASE 2",
+    "Créer src/components/shared/ErrorBanner.vue avec props modelValue, message, retryable, emits update:modelValue et retry, style fond error-light + bouton Réessayer",
+    "Ajouter `const error = ref(null)` et `const showError = ref(false)` dans src/features/dashboard/views/DashboardView.vue, src/features/production/views/ProductionView.vue, src/features/health/views/HealthView.vue, src/features/herd/views/TroupeauView.vue, src/features/worker/views/WorkerHomeView.vue",
+    "Au catch de chaque fetch, set `error.value = 'Message utilisateur clair'` et `showError.value = true`",
+    "Ajouter `<ErrorBanner v-model=\"showError\" :message=\"error\" @retry=\"loadData\" />` avant contenu principal dans chaque vue",
+    "Modifier src/services/production_service.js : supprimer try/catch mock dans getProductionSummary() lignes 12-19, laisser erreur remonter (ou ajouter isMock: true si mock gardé)",
+    "Modifier src/features/dashboard/views/DashboardView.vue lignes 15-25 : remplacer `productionLabels = ref(['Lun', ...])` et `productionData = ref([0,0,...])` par `ref([])`, gérer état vide dans ProductionChart",
+    "Tester : arrêter backend, recharger pages, vérifier ErrorBanner apparaît + bouton Réessayer fonctionne, relancer backend, retry charge données"
+  ],
+  "acceptance_criteria": [
+    "ErrorBanner.vue créé, réutilisable, style cohérent design system",
+    "Toutes vues (Dashboard, Production, Santé, Troupeau, Worker) affichent ErrorBanner en cas d'erreur réseau",
+    "Bouton Réessayer dans ErrorBanner re-déclenche fetch et masque banner si succès",
+    "Production service ne retourne plus mock silencieux (ou indique isMock clairement)",
+    "Dashboard ne masque plus absence de données avec valeurs par défaut [0,0,0...]",
+    "Tests manuel backend down → ErrorBanner → retry → données chargent"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run dev",
+    "Arrêter backend (Ctrl+C dans terminal backend)",
+    "Recharger http://localhost:5173/dashboard → ErrorBanner visible",
+    "Cliquer Réessayer → toujours erreur (backend down)",
+    "Relancer backend, cliquer Réessayer → données chargent, ErrorBanner disparaît",
+    "Répéter pour /dashboard/production, /dashboard/troupeau, /dashboard/sante"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

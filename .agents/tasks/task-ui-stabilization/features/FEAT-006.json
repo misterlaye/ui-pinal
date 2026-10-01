@@ -1,0 +1,36 @@
+{
+  "id": "FEAT-006",
+  "type": "feat",
+  "description": "Polish visuel — Unifier titres pages (classes utilitaires), gaps sections, contraste Worker UI, labels charts mobiles. Cohérence visuelle finale.",
+  "status": "pending",
+  "steps": [
+    "Lire context.json et plan ui-plan.md section PHASE 6",
+    "Ajouter dans src/style.css classes utilitaires : `.page-title { font-size: 32px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }`, `.page-subtitle { font-size: var(--font-size-sm); color: var(--text-muted); }`, `.section-title { font-size: var(--font-size-xl); font-weight: 700; margin-bottom: 12px; }`",
+    "Modifier src/features/dashboard/views/DashboardView.vue : remplacer `.dash-greeting` par `.page-title` global, supprimer style custom",
+    "Modifier src/features/herd/views/TroupeauView.vue, src/features/production/views/ProductionView.vue, src/features/finance/views/FinanceView.vue, src/features/health/views/HealthView.vue : remplacer `.page-title` custom par global, supprimer styles custom",
+    "Unifier gaps sections : chercher `.dashboard-content`, `.production-view`, `.finance-view`, etc. → set `gap: 24px` (var(--space-6)) partout",
+    "Corriger contraste Worker UI src/features/worker/views/WorkerHomeView.vue : texte sur fond jaune .action-card-main → `color: #000000` (pur noir) au lieu de #1A1A1A, tester ratio contraste > 4.5:1",
+    "Vérifier labels charts mobiles déjà corrigés FEAT-001 (font-size 12px @640px dans options Chart.js), sinon appliquer",
+    "Audit visuel final : vérifier cohérence border-radius (tokens), shadows (tokens), spacing (gaps 24px), typographie (titres 32px)"
+  ],
+  "acceptance_criteria": [
+    "Classes utilitaires .page-title, .page-subtitle, .section-title ajoutées dans style.css",
+    "Tous titres pages (Dashboard, Troupeau, Production, Finance, Santé) utilisent .page-title global → 32px cohérent",
+    "Gaps sections uniformes 24px dans toutes vues principales",
+    "Contraste Worker UI texte/jaune > 4.5:1 (testé avec outil contraste WebAIM ou similaire)",
+    "Labels charts lisibles mobile 12px (déjà fait FEAT-001 si fusionné)",
+    "Audit visuel : cohérence radius, shadows, spacing, typographie",
+    "Tests manuel : parcourir Dashboard, Troupeau, Production, Finance, Santé, Worker → feeling unifié"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run dev",
+    "Parcourir http://localhost:5173/dashboard, /dashboard/troupeau, /dashboard/production, /dashboard/finances, /dashboard/sante",
+    "Vérifier titres tous 32px, gaps entre sections uniformes",
+    "Worker : /worker/home → vérifier texte lisible sur fond jaune",
+    "Tester contraste avec https://webaim.org/resources/contrastchecker/ : #000000 sur #EBC137",
+    "Audit visuel : noter incohérences résiduelles dans findings FEAT-006"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

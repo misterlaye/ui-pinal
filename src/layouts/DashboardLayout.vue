@@ -345,12 +345,22 @@ const exploitationName = ref(
     display: none;
   }
 
+  .topnav-mobile-toggle {
+    display: flex;
+  }
+}
+
+@media (max-width: 768px) {
+  .topnav-inner {
+    gap: 12px;
+  }
+
   .topnav-period {
     display: none;
   }
 
-  .topnav-mobile-toggle {
-    display: flex;
+  .topnav-mobile-menu {
+    padding: 8px 16px 12px;
   }
 }
 
@@ -359,12 +369,19 @@ const exploitationName = ref(
     padding: 0 16px;
   }
 
-  .topnav-exploitation {
-    display: none;
+  .topnav-exploitation-text {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .dashboard-main {
     padding: 16px;
+  }
+
+  .topnav-right {
+    gap: 8px;
   }
 }
 </style>

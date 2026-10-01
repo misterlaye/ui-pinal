@@ -2,6 +2,9 @@
 import { ref, onMounted, computed } from 'vue';
 import ProductionChart from '../components/ProductionChart.vue';
 import AICopilotPanel from '../components/AICopilotPanel.vue';
+import ErrorBanner from '../../../components/shared/ErrorBanner.vue';
+import KpiCard from '../../../components/shared/KpiCard.vue';
+import { SkeletonCard, SkeletonChart, SkeletonText } from '../../../components/skeleton';
 import {
   PhWarningCircle,
   PhWarning,
@@ -23,14 +26,15 @@ const exploitationName = ref(localStorage.getItem('exploitation_name') || 'Mon e
 const alerts = ref([]);
 const summary = ref(null);
 const isLoading = ref(true);
-const error = ref(null);
+const showError = ref(false);
+const errorMessage = ref('');
 const aiCopilotCapability = ref({ enabled: false, disclosure: null, scenarioOptions: [] });
 const expandedAlertId = ref(null);
 
 const productionTotal = computed(() => summary.value?.production?.kgDerniers7Jours || 0);
 const productionChange = ref('+0%');
-const productionLabels = ref(['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']);
-const productionData = ref([0, 0, 0, 0, 0, 0, 0]);
+const productionLabels = ref([]);
+const productionData = ref([]);
 
 const topAnimals = ref([]);
 
@@ -42,7 +46,7 @@ const kpis = computed(() => {
       label: 'Coût de revient moyen', 
       value: fin?.coutMoyenRationParJour != null ? fin.coutMoyenRationParJour : '—', 
       unit: fin?.coutMoyenRationParJour != null ? 'FCFA / j' : '', 
-      change: 'stable', 
+      change: '', 
       changeDir: 'stable', 
       note: 'Coût ration' 
     },
@@ -50,7 +54,7 @@ const kpis = computed(() => {
       label: 'Prix moyen de vente', 
       value: fin?.prixMoyenLaitParKg != null ? fin.prixMoyenLaitParKg : 'Non configuré', 
       unit: fin?.prixMoyenLaitParKg != null ? 'FCFA / L' : '', 
-      change: 'stable', 
+      change: '', 
       changeDir: 'stable', 
       note: 'Prix du lait' 
     },
@@ -58,7 +62,7 @@ const kpis = computed(() => {
       label: 'CA estimé (30 jours)', 
       value: fin?.chiffreAffairesEstimeLait30Jours != null ? fin.chiffreAffairesEstimeLait30Jours : 'Non configuré', 
       unit: fin?.chiffreAffairesEstimeLait30Jours != null ? 'FCFA' : '', 
-      change: 'stable', 
+      change: '', 
       changeDir: 'stable', 
       note: 'Estimé' 
     },
@@ -66,7 +70,7 @@ const kpis = computed(() => {
       label: 'Marge estimée (30 jours)', 
       value: fin?.margeEstimeeSurCoutAlimentaire30Jours != null ? fin.margeEstimeeSurCoutAlimentaire30Jours : 'Non configurée', 
       unit: fin?.margeEstimeeSurCoutAlimentaire30Jours != null ? 'FCFA' : '', 
-      change: 'stable', 
+      change: '', 
       changeDir: 'stable', 
       note: 'Estimée' 
     },
@@ -86,32 +90,34 @@ const herd = computed(() => {
   };
 });
 
-onMounted(async () => {
+async function loadDashboard() {
   try {
     isLoading.value = true;
+    showError.value = false;
+    
     const [summaryData, anomaliesData, prodData, aiCapability] = await Promise.all([
       getDashboardSummary(),
       getDashboardAnomalies(),
       getProductionSummary().catch(() => null),
       getAICopilotCapability().catch(() => ({ enabled: false }))
     ]);
+    
     summary.value = summaryData;
     aiCopilotCapability.value = aiCapability;
 
-    if (prodData) {
-      if (prodData.chartData?.labels?.length) {
-        productionLabels.value = prodData.chartData.labels;
-        productionData.value = prodData.chartData.currentWeek;
-      }
-      if (prodData.animalProduction?.length) {
-        topAnimals.value = prodData.animalProduction.slice(0, 4).map((a, idx) => ({
-          rank: idx + 1,
-          name: a.name,
-          race: a.race || 'Non spécifiée',
-          litres: a.total,
-          trend: a.trend >= 0 ? 'up' : 'down'
-        }));
-      }
+    if (prodData && prodData.chartData?.labels?.length > 0) {
+      productionLabels.value = prodData.chartData.labels;
+      productionData.value = prodData.chartData.currentWeek || [];
+    }
+    
+    if (prodData?.animalProduction?.length) {
+      topAnimals.value = prodData.animalProduction.slice(0, 4).map((a, idx) => ({
+        rank: idx + 1,
+        name: a.name,
+        race: a.race || 'Non spécifiée',
+        litres: a.total,
+        trend: a.trend >= 0 ? 'up' : 'down'
+      }));
     }
     
     alerts.value = anomaliesData.map((ano) => ({
@@ -127,11 +133,16 @@ onMounted(async () => {
     }));
 
   } catch (e) {
-    error.value = "Erreur de chargement du tableau de bord.";
+    showError.value = true;
+    errorMessage.value = "Erreur de chargement du tableau de bord. Vérifiez votre connexion.";
     console.error(e);
   } finally {
     isLoading.value = false;
   }
+}
+
+onMounted(() => {
+  loadDashboard();
 });
 
 function getAlertIconColor(severity) {
@@ -160,251 +171,277 @@ function toggleAlertDetails(alertId) {
 
 <template>
   <div class="dashboard animate-fade-in">
-    <!-- Header -->
-    <section class="dash-header">
-      <div class="dash-header-left">
-        <h1 class="dash-greeting">Bonjour, {{ userName }}</h1>
-        <p class="dash-subtext">
-          Thiès, Sénégal • Température moyenne : 31°C • Suivi de votre cheptel laitier en temps réel.
-        </p>
-      </div>
-      <div class="dash-season-badge">
-        <PhSun :size="22" weight="duotone" color="#C87533" />
-        <div>
-          <span class="dash-season-label">Saison Sèche</span>
-          <span class="dash-season-sub">Vigilance stress thermique</span>
+    <!-- Error Banner -->
+    <ErrorBanner 
+      v-model="showError"
+      :message="errorMessage"
+      @retry="loadDashboard"
+    />
+
+    <!-- Loading State with Skeleton -->
+    <template v-if="isLoading">
+      <!-- Header Skeleton -->
+      <section class="dash-header">
+        <div class="dash-header-left">
+          <SkeletonText width="220px" height="28px" />
+          <SkeletonText width="400px" height="14px" />
         </div>
-      </div>
-    </section>
+        <SkeletonCard height="60px" style="width: 200px;" :lines="0" :show-icon="false" />
+      </section>
 
-    <!-- Section 01 — Alerts -->
-    <section class="dash-section">
-      <div class="dash-section-header">
-        <span class="dash-section-title-text">ATTENTION REQUISE</span>
-        <span class="dash-alert-count">{{ alerts.length }}</span>
-        <span class="dash-section-desc">
-          — Événements détectés par Pinal méritant votre attention
-        </span>
-      </div>
-
-      <div class="alert-list">
-        <div
-          v-for="alert in alerts"
-          :key="alert.id"
-          class="alert-entry"
-        >
-          <div class="alert-card" :class="`alert-card--${alert.severity}`">
-          <div class="alert-card-icon">
-            <PhWarningCircle
-              v-if="alert.severity === 'critical'"
-              :size="22"
-              weight="fill"
-              :color="getAlertIconColor(alert.severity)"
-            />
-            <PhWarning
-              v-else
-              :size="22"
-              weight="fill"
-              :color="getAlertIconColor(alert.severity)"
-            />
-          </div>
-
-          <div class="alert-card-body">
-            <div class="alert-card-title-row">
-              <strong class="alert-card-title">{{ alert.title }}</strong>
-              <span class="alert-tag" :class="getTagClass(alert.tagColor)">
-                {{ alert.tag }}
-              </span>
-            </div>
-            <p class="alert-card-desc">{{ alert.description }}</p>
-          </div>
-
-          <div class="alert-card-actions">
-            <span class="alert-time">{{ alert.time }}</span>
-            <div class="alert-btns">
-              <button
-                v-if="aiCopilotCapability.enabled"
-                class="alert-btn alert-btn--outline"
-                type="button"
-                :aria-expanded="expandedAlertId === alert.id"
-                @click="toggleAlertDetails(alert.id)"
-              >
-                {{ expandedAlertId === alert.id ? 'Masquer' : 'Détails' }}
-              </button>
-            </div>
-          </div>
-          </div>
-          <AICopilotPanel
-            v-if="expandedAlertId === alert.id"
-            :anomaly="alert.anomaly"
-            :capability="aiCopilotCapability"
-          />
+      <!-- Alerts Skeleton -->
+      <section class="dash-section">
+        <SkeletonText width="200px" height="14px" />
+        <div style="margin-top: 16px;">
+          <SkeletonCard height="80px" :lines="2" v-for="i in 3" :key="i" style="margin-bottom: 12px;" />
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Section 02 — Production -->
-    <section class="dash-section">
-      <div class="dash-section-header">
-        <span class="dash-section-title-text">PRODUCTION</span>
-      </div>
-
-      <div class="production-grid">
-        <!-- Chart Card -->
-        <div class="card production-card">
-          <div class="production-card-header">
-            <div>
-              <h3 class="production-card-title">Évolution de la production laitière</h3>
-              <p class="production-card-subtitle">
-                Production cumulée de l'exploitation (litres par jour)
-              </p>
-            </div>
-            <div class="production-total">
-              <span class="production-total-value">{{ productionTotal }}</span>
-              <span class="production-total-unit">L</span>
-              <span class="production-change positive">
-                <PhTrendUp :size="14" weight="bold" />
-                {{ productionChange }}
-              </span>
-              <span class="production-total-period">Total sur 7 jours</span>
-            </div>
-          </div>
-
-          <ProductionChart
-            :labels="productionLabels"
-            :data-points="productionData"
-          />
+      <!-- Production Skeleton -->
+      <section class="dash-section">
+        <SkeletonText width="120px" height="14px" />
+        <div class="production-grid" style="margin-top: 16px;">
+          <SkeletonChart height="240px" />
+          <SkeletonCard height="240px" :lines="4" />
         </div>
+      </section>
 
-        <!-- Rankings Card -->
-        <div class="card rankings-card">
-          <div class="rankings-header">
-            <div>
-              <h3 class="rankings-title">Performances individuelles</h3>
-              <p class="rankings-subtitle">Meilleures productrices vs alertes</p>
-            </div>
-            <span class="rankings-badge">LACTATION</span>
-          </div>
-
-          <div class="rankings-list" v-if="topAnimals.length > 0">
-            <div
-              v-for="animal in topAnimals"
-              :key="animal.rank"
-              class="ranking-item"
-              :class="{ 'ranking-item--alert': animal.alert }"
-            >
-              <span class="ranking-num">#{{ animal.rank }}</span>
-              <div
-                class="ranking-avatar"
-                :style="{ background: getAnimalColor(animal.rank) }"
-              >
-                {{ getAnimalInitials(animal.name) }}
-              </div>
-              <div class="ranking-info">
-                <span class="ranking-name">{{ animal.name }}</span>
-                <span class="ranking-race">{{ animal.race }}</span>
-              </div>
-              <div class="ranking-value">
-                <span class="ranking-litres">{{ animal.litres }} L</span>
-                <PhTrendUp
-                  v-if="animal.trend === 'up'"
-                  :size="14"
-                  weight="bold"
-                  color="#16A34A"
-                />
-                <PhTrendDown
-                  v-else
-                  :size="14"
-                  weight="bold"
-                  color="#EF4444"
-                />
-              </div>
-            </div>
-          </div>
-          <div v-else style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
-            Aucune traite enregistrée pour le moment.
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Section 03 — Economic Indicators -->
-    <section class="dash-section">
-      <div class="dash-section-header">
-        <PhCurrencyCircleDollar :size="18" weight="regular" color="#C87533" />
-        <span class="dash-section-title-text">Indicateurs économiques et rentabilité</span>
-        <a href="#" class="dash-section-link">
-          Voir le détail financier
-          <PhArrowRight :size="14" weight="bold" />
-        </a>
+      <!-- KPIs Skeleton -->
+      <div class="kpi-grid" style="margin-top: 28px;">
+        <SkeletonCard height="120px" :lines="2" :show-icon="false" v-for="i in 4" :key="i" />
       </div>
 
-      <div class="kpi-grid">
-        <div v-for="kpi in kpis" :key="kpi.label" class="kpi-card card">
-          <span class="kpi-label">{{ kpi.label }}</span>
-          <div class="kpi-value-row">
-            <span class="kpi-value">{{ kpi.value }}</span>
-            <span class="kpi-unit">{{ kpi.unit }}</span>
-          </div>
-          <div class="kpi-footer">
-            <span
-              v-if="kpi.change !== 'stable'"
-              class="kpi-change"
-              :class="kpi.changeDir === 'up' ? 'positive' : 'negative'"
-            >
-              <PhTrendUp v-if="kpi.changeDir === 'up'" :size="12" weight="bold" />
-              <PhTrendDown v-else :size="12" weight="bold" />
-              {{ kpi.change }}
-            </span>
-            <span v-else class="kpi-change neutral">
-              ↔ stable
-            </span>
-            <span class="kpi-note">{{ kpi.note }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
+      <!-- Herd Bar Skeleton -->
+      <SkeletonCard height="100px" :lines="2" style="margin-top: 28px;" />
+    </template>
 
-    <!-- Herd Status Bar -->
-    <section class="herd-bar card">
-      <div class="herd-bar-left">
-        <div class="herd-bar-icon">
-          <PhCow :size="24" weight="duotone" color="#C87533" />
-        </div>
-        <div>
-          <h4 class="herd-bar-title">État du troupeau</h4>
-          <p class="herd-bar-subtitle">
-            {{ herd.total }} animaux enregistrés • {{ herd.enLactation }} en lactation • {{ herd.taries }} taries
+    <!-- Loaded Content -->
+    <template v-else>
+      <!-- Header -->
+      <section class="dash-header">
+        <div class="dash-header-left">
+          <h1 class="dash-greeting">Bonjour, {{ userName }}</h1>
+          <p class="dash-subtext">
+            Thiès, Sénégal • Température moyenne : 31°C • Suivi de votre cheptel laitier en temps réel.
           </p>
         </div>
-      </div>
-
-      <div class="herd-bar-center">
-        <div class="herd-progress">
-          <div
-            class="herd-progress-fill herd-progress--active"
-            :style="{ width: herd.pctLactation + '%' }"
-          />
-          <div
-            class="herd-progress-fill herd-progress--taries"
-            :style="{ width: herd.pctTaries + '%' }"
-          />
+        <div class="dash-season-badge">
+          <PhSun :size="22" weight="duotone" color="#C87533" />
+          <div>
+            <span class="dash-season-label">Saison Sèche</span>
+            <span class="dash-season-sub">Vigilance stress thermique</span>
+          </div>
         </div>
-        <div class="herd-legend">
-          <span class="herd-legend-item herd-legend--active">
-            {{ herd.pctLactation }}% Lactation active
-          </span>
-          <span class="herd-legend-item herd-legend--taries">
-            {{ herd.pctTaries }}% Taries (repos)
+      </section>
+
+      <!-- Section 01 — Alerts -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <span class="dash-section-title-text">ATTENTION REQUISE</span>
+          <span class="dash-alert-count">{{ alerts.length }}</span>
+          <span class="dash-section-desc">
+            — Événements détectés par Pinal méritant votre attention
           </span>
         </div>
-      </div>
 
-      <button class="herd-bar-btn">
-        Voir le troupeau
-        <PhArrowRight :size="16" weight="bold" />
-      </button>
-    </section>
+        <div class="alert-list">
+          <div
+            v-for="alert in alerts"
+            :key="alert.id"
+            class="alert-entry"
+          >
+            <div class="alert-card" :class="`alert-card--${alert.severity}`">
+            <div class="alert-card-icon">
+              <PhWarningCircle
+                v-if="alert.severity === 'critical'"
+                :size="22"
+                weight="fill"
+                :color="getAlertIconColor(alert.severity)"
+              />
+              <PhWarning
+                v-else
+                :size="22"
+                weight="fill"
+                :color="getAlertIconColor(alert.severity)"
+              />
+            </div>
+
+            <div class="alert-card-body">
+              <div class="alert-card-title-row">
+                <strong class="alert-card-title">{{ alert.title }}</strong>
+                <span class="alert-tag" :class="getTagClass(alert.tagColor)">
+                  {{ alert.tag }}
+                </span>
+              </div>
+              <p class="alert-card-desc">{{ alert.description }}</p>
+            </div>
+
+            <div class="alert-card-actions">
+              <span class="alert-time">{{ alert.time }}</span>
+              <div class="alert-btns">
+                <button
+                  v-if="aiCopilotCapability.enabled"
+                  class="alert-btn alert-btn--outline"
+                  type="button"
+                  :aria-expanded="expandedAlertId === alert.id"
+                  @click="toggleAlertDetails(alert.id)"
+                >
+                  {{ expandedAlertId === alert.id ? 'Masquer' : 'Détails' }}
+                </button>
+              </div>
+            </div>
+            </div>
+            <AICopilotPanel
+              v-if="expandedAlertId === alert.id"
+              :anomaly="alert.anomaly"
+              :capability="aiCopilotCapability"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 02 — Production -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <span class="dash-section-title-text">PRODUCTION</span>
+        </div>
+
+        <div class="production-grid">
+          <!-- Chart Card -->
+          <div class="card production-card">
+            <div class="production-card-header">
+              <div>
+                <h3 class="production-card-title">Évolution de la production laitière</h3>
+                <p class="production-card-subtitle">
+                  Production cumulée de l'exploitation (litres par jour)
+                </p>
+              </div>
+              <div class="production-total">
+                <span class="production-total-value">{{ productionTotal }}</span>
+                <span class="production-total-unit">L</span>
+                <span class="production-change positive">
+                  <PhTrendUp :size="14" weight="bold" />
+                  {{ productionChange }}
+                </span>
+                <span class="production-total-period">Total sur 7 jours</span>
+              </div>
+            </div>
+
+            <ProductionChart
+              :labels="productionLabels"
+              :data-points="productionData"
+            />
+          </div>
+
+          <!-- Rankings Card -->
+          <div class="card rankings-card">
+            <div class="rankings-header">
+              <div>
+                <h3 class="rankings-title">Performances individuelles</h3>
+                <p class="rankings-subtitle">Meilleures productrices vs alertes</p>
+              </div>
+              <span class="rankings-badge">LACTATION</span>
+            </div>
+
+            <div class="rankings-list" v-if="topAnimals.length > 0">
+              <div
+                v-for="animal in topAnimals"
+                :key="animal.rank"
+                class="ranking-item"
+                :class="{ 'ranking-item--alert': animal.alert }"
+              >
+                <span class="ranking-num">#{{ animal.rank }}</span>
+                <div
+                  class="ranking-avatar"
+                  :style="{ background: getAnimalColor(animal.rank) }"
+                >
+                  {{ getAnimalInitials(animal.name) }}
+                </div>
+                <div class="ranking-info">
+                  <span class="ranking-name">{{ animal.name }}</span>
+                  <span class="ranking-race">{{ animal.race }}</span>
+                </div>
+                <div class="ranking-value">
+                  <span class="ranking-litres">{{ animal.litres }} L</span>
+                  <PhTrendUp
+                    v-if="animal.trend === 'up'"
+                    :size="14"
+                    weight="bold"
+                    color="#16A34A"
+                  />
+                  <PhTrendDown
+                    v-else
+                    :size="14"
+                    weight="bold"
+                    color="#EF4444"
+                  />
+                </div>
+              </div>
+            </div>
+            <div v-else style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
+              Aucune traite enregistrée pour le moment.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 03 — Economic Indicators -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <PhCurrencyCircleDollar :size="18" weight="regular" color="#C87533" />
+          <span class="dash-section-title-text">Indicateurs économiques et rentabilité</span>
+          <a href="#" class="dash-section-link">
+            Voir le détail financier
+            <PhArrowRight :size="14" weight="bold" />
+          </a>
+        </div>
+
+        <div class="kpi-grid">
+          <KpiCard v-for="kpi in kpis" :key="kpi.label" v-bind="kpi" />
+        </div>
+      </section>
+
+      <!-- Herd Status Bar -->
+      <section class="herd-bar card">
+        <div class="herd-bar-left">
+          <div class="herd-bar-icon">
+            <PhCow :size="24" weight="duotone" color="#C87533" />
+          </div>
+          <div>
+            <h4 class="herd-bar-title">État du troupeau</h4>
+            <p class="herd-bar-subtitle">
+              {{ herd.total }} animaux enregistrés • {{ herd.enLactation }} en lactation • {{ herd.taries }} taries
+            </p>
+          </div>
+        </div>
+
+        <div class="herd-bar-center">
+          <div class="herd-progress">
+            <div
+              class="herd-progress-fill herd-progress--active"
+              :style="{ width: herd.pctLactation + '%' }"
+            />
+            <div
+              class="herd-progress-fill herd-progress--taries"
+              :style="{ width: herd.pctTaries + '%' }"
+            />
+          </div>
+          <div class="herd-legend">
+            <span class="herd-legend-item herd-legend--active">
+              {{ herd.pctLactation }}% Lactation active
+            </span>
+            <span class="herd-legend-item herd-legend--taries">
+              {{ herd.pctTaries }}% Taries (repos)
+            </span>
+          </div>
+        </div>
+
+        <button class="herd-bar-btn">
+          Voir le troupeau
+          <PhArrowRight :size="16" weight="bold" />
+        </button>
+      </section>
+    </template>
   </div>
 </template>
 
@@ -412,7 +449,7 @@ function toggleAlertDetails(alertId) {
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 24px;
   padding-bottom: 40px;
 }
 
@@ -850,7 +887,7 @@ function toggleAlertDetails(alertId) {
 /* --- KPI Grid --- */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
 
@@ -1025,12 +1062,6 @@ function toggleAlertDetails(alertId) {
 }
 
 /* --- Responsive --- */
-@media (max-width: 1200px) {
-  .kpi-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
 @media (max-width: 1024px) {
   .production-grid {
     grid-template-columns: 1fr;
@@ -1046,13 +1077,17 @@ function toggleAlertDetails(alertId) {
 }
 
 @media (max-width: 768px) {
+  .dashboard {
+    gap: 20px;
+  }
+
   .dash-header {
     flex-direction: column;
     gap: 16px;
   }
 
   .dash-greeting {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .alert-card {
@@ -1065,10 +1100,6 @@ function toggleAlertDetails(alertId) {
     align-items: center;
     width: 100%;
     justify-content: space-between;
-  }
-
-  .kpi-grid {
-    grid-template-columns: 1fr;
   }
 
   .herd-bar {
@@ -1084,6 +1115,20 @@ function toggleAlertDetails(alertId) {
   .herd-bar-btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .production-card-header {
+    flex-direction: column;
+  }
+
+  .production-total {
+    text-align: left;
   }
 }
 </style>

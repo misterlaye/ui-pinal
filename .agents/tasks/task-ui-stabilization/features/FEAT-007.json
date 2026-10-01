@@ -1,0 +1,37 @@
+{
+  "id": "FEAT-007",
+  "type": "refactor",
+  "description": "Consolidation composants — Extraire KpiCard réutilisable, finaliser ErrorBanner (déjà fait FEAT-002), supprimer duplication CSS, documenter composants mutualisés.",
+  "status": "pending",
+  "steps": [
+    "Lire context.json et plan ui-plan.md section PHASE 7",
+    "Créer src/components/shared/KpiCard.vue : props label, value, unit, change, changeDir (up/down/stable), note, computed changeClass et changeIcon (PhTrendUp/Down), template .kpi-card avec structure header + value-row + footer",
+    "Copier styles .kpi-card depuis src/features/dashboard/views/DashboardView.vue vers KpiCard.vue scoped",
+    "Modifier src/features/dashboard/views/DashboardView.vue : importer KpiCard, remplacer structure kpis HTML par `<div class=\"kpi-grid\"><KpiCard v-for=\"kpi in kpis\" :key=\"kpi.label\" v-bind=\"kpi\" /></div>`, supprimer styles .kpi-card",
+    "Répéter pour src/features/production/components/ProductionKPIs.vue, src/features/finance/components/FinanceKPIs.vue, src/features/health/components/HealthKPIs.vue (si structures similaires)",
+    "Vérifier ErrorBanner.vue déjà créé FEAT-002, sinon créer maintenant",
+    "Supprimer duplication CSS : vérifier classes .btn-* supprimées (fait FEAT-005), chercher autres duplications (ex: .form-* si dupliquées)",
+    "Créer src/components/README.md documentant composants mutualisés : PnButton, PnInput, PnModal, PnCheckbox, PnDrawer, SkeletonCard/Table/Chart/Text/Circle, KpiCard, ErrorBanner, avec exemples usage et props",
+    "Audit final code : grep duplications, vérifier imports cohérents, nettoyer console.log/comments debug"
+  ],
+  "acceptance_criteria": [
+    "KpiCard.vue créé, réutilisable, props typés (label, value, unit, change, changeDir, note)",
+    "Dashboard, Production, Finance, Santé utilisent KpiCard (si applicable)",
+    "ErrorBanner.vue utilisé dans toutes vues (confirmé FEAT-002)",
+    "Duplication CSS supprimée : classes .btn-* absentes (FEAT-005), autres duplications nettoyées",
+    "README.md composants créé, liste tous composants mutualisés avec exemples",
+    "Audit code : pas de console.log résiduels, imports propres, commentaires utiles gardés",
+    "Tests manuel : KpiCards affichent correctement avec trends (up/down/stable)"
+  ],
+  "verification": [
+    "npm run build → aucune erreur",
+    "npm run dev",
+    "Dashboard : vérifier KPIs affichent (label, value, unit, trend icon/text, note)",
+    "Production : vérifier KPIs similaires utilisent KpiCard",
+    "Finance : idem",
+    "grep -r 'console.log' src/ --include='*.vue' --include='*.js' → vérifier aucun debug résiduel (ou justifiés)",
+    "Lire src/components/README.md → vérifier documentation claire et complète"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

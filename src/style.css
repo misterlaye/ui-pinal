@@ -205,7 +205,7 @@ textarea.form-input {
   resize: vertical;
 }
 
-/* --- Buttons --- */
+/* --- Buttons (DEPRECATED: Use <PnButton> component instead) --- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -352,3 +352,48 @@ textarea.form-input {
 .text-success { color: var(--success); }
 .font-medium { font-weight: 500; }
 .font-semibold { font-weight: 600; }
+
+/* --- Page Title Utilities --- */
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.section-title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 12px;
+}
+
+/* --- Table Wrapper for Responsive --- */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-lg);
+}
+
+.table-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: var(--bg-page);
+  border-radius: var(--radius-sm);
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--border-input);
+  border-radius: var(--radius-sm);
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

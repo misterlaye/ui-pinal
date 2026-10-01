@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted, shallowRef } from 'vue';
+import { computed, shallowRef } from 'vue';
 import { Line } from 'vue-chartjs';
+import { PhChartLine } from '@phosphor-icons/vue';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,13 +17,15 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, 
 const props = defineProps({
   labels: {
     type: Array,
-    default: () => ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+    default: () => [],
   },
   dataPoints: {
     type: Array,
-    default: () => [95, 110, 105, 130, 125, 140, 142],
+    default: () => [],
   },
 });
+
+const isEmpty = computed(() => props.dataPoints.length === 0 || props.dataPoints.every(val => val === 0));
 
 const chartData = shallowRef({
   labels: props.labels,
@@ -103,7 +106,11 @@ const chartOptions = {
 
 <template>
   <div class="production-chart">
-    <Line :data="chartData" :options="chartOptions" />
+    <div v-if="isEmpty" class="chart-empty-state">
+      <PhChartLine :size="48" color="#D1D5DB" />
+      <p>Aucune donnée de production disponible</p>
+    </div>
+    <Line v-else :data="chartData" :options="chartOptions" />
   </div>
 </template>
 
@@ -112,5 +119,20 @@ const chartOptions = {
   width: 100%;
   height: 240px;
   position: relative;
+}
+
+.chart-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+}
+
+.chart-empty-state p {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-weight: 500;
 }
 </style>
