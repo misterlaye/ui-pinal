@@ -1,5 +1,6 @@
 <script setup>
 import { PhTruck } from '@phosphor-icons/vue';
+import { formatCurrency } from '../../../utils/formatters.js';
 
 const props = defineProps({
   deliveries: {
@@ -7,10 +8,6 @@ const props = defineProps({
     required: true
   }
 });
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('fr-SN', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(value);
-};
 </script>
 
 <template>

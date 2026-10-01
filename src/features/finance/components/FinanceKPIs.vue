@@ -1,5 +1,6 @@
 <script setup>
 import { PhTrendDown, PhTrendUp, PhTag, PhChartLineUp, PhBank, PhCoins } from '@phosphor-icons/vue';
+import { formatNumber, formatCurrency } from '../../../utils/formatters.js';
 
 const props = defineProps({
   kpis: {
@@ -7,10 +8,6 @@ const props = defineProps({
     required: true
   }
 });
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('fr-SN', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(value);
-};
 </script>
 
 <template>
@@ -25,11 +22,11 @@ const formatCurrency = (value) => {
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ kpis.coutRevient }} <span class="value-currency">FCFA / L</span></div>
+        <div class="kpi-value">{{ formatNumber(kpis.coutRevient) }} <span class="value-currency">FCFA / L</span></div>
         <div class="kpi-trend" :class="kpis.coutRevientTrend < 0 ? 'text-green' : 'text-red'">
           <PhTrendDown v-if="kpis.coutRevientTrend < 0" :size="12" weight="bold" />
           <PhTrendUp v-else :size="12" weight="bold" />
-          <span class="trend-label">{{ kpis.coutRevientTrend }}% vs période préc.</span>
+          <span class="trend-label">{{ formatNumber(kpis.coutRevientTrend) }}% vs période préc.</span>
         </div>
       </div>
     </div>
@@ -43,7 +40,7 @@ const formatCurrency = (value) => {
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ kpis.prixMoyenVente }} <span class="value-currency">FCFA / L</span></div>
+        <div class="kpi-value">{{ formatNumber(kpis.prixMoyenVente) }} <span class="value-currency">FCFA / L</span></div>
         <div class="kpi-trend text-muted">
           <span class="trend-label">Stable vs période préc.</span>
         </div>
@@ -59,10 +56,10 @@ const formatCurrency = (value) => {
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ kpis.margeBrute }} <span class="value-currency">FCFA / L</span></div>
+        <div class="kpi-value">{{ formatNumber(kpis.margeBrute) }} <span class="value-currency">FCFA / L</span></div>
         <div class="kpi-trend text-green">
           <PhTrendUp :size="12" weight="bold" />
-          <span class="trend-label">+{{ kpis.margeBruteTrend }}% vs période préc.</span>
+          <span class="trend-label">+{{ formatNumber(kpis.margeBruteTrend) }}% vs période préc.</span>
         </div>
       </div>
     </div>
@@ -76,10 +73,10 @@ const formatCurrency = (value) => {
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value text-white">{{ formatCurrency(kpis.chiffreAffaires).replace('FCFA', '').trim() }} <span class="value-currency-white">FCFA</span></div>
+        <div class="kpi-value text-white">{{ formatNumber(kpis.chiffreAffaires) }} <span class="value-currency-white">FCFA</span></div>
         <div class="kpi-trend text-white-muted">
           <PhTrendDown :size="12" weight="bold" />
-          <span class="trend-label">{{ kpis.chiffreAffairesTrend }}% vs période préc.</span>
+          <span class="trend-label">{{ formatNumber(kpis.chiffreAffairesTrend) }}% vs période préc.</span>
         </div>
       </div>
     </div>

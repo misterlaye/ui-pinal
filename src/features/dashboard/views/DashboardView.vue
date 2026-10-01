@@ -5,6 +5,7 @@ import AICopilotPanel from '../components/AICopilotPanel.vue';
 import ErrorBanner from '../../../components/shared/ErrorBanner.vue';
 import KpiCard from '../../../components/shared/KpiCard.vue';
 import { SkeletonCard, SkeletonChart, SkeletonText } from '../../../components/skeleton';
+import { formatNumber } from '../../../utils/formatters.js';
 import {
   PhWarningCircle,
   PhWarning,
@@ -44,7 +45,7 @@ const kpis = computed(() => {
   return [
     { 
       label: 'Coût de revient moyen', 
-      value: fin?.coutMoyenRationParJour != null ? fin.coutMoyenRationParJour : '—', 
+      value: fin?.coutMoyenRationParJour != null ? formatNumber(fin.coutMoyenRationParJour) : '—', 
       unit: fin?.coutMoyenRationParJour != null ? 'FCFA / j' : '', 
       change: '', 
       changeDir: 'stable', 
@@ -52,7 +53,7 @@ const kpis = computed(() => {
     },
     { 
       label: 'Prix moyen de vente', 
-      value: fin?.prixMoyenLaitParKg != null ? fin.prixMoyenLaitParKg : 'Non configuré', 
+      value: fin?.prixMoyenLaitParKg != null ? formatNumber(fin.prixMoyenLaitParKg) : 'Non configuré', 
       unit: fin?.prixMoyenLaitParKg != null ? 'FCFA / L' : '', 
       change: '', 
       changeDir: 'stable', 
@@ -60,7 +61,7 @@ const kpis = computed(() => {
     },
     { 
       label: 'CA estimé (30 jours)', 
-      value: fin?.chiffreAffairesEstimeLait30Jours != null ? fin.chiffreAffairesEstimeLait30Jours : 'Non configuré', 
+      value: fin?.chiffreAffairesEstimeLait30Jours != null ? formatNumber(fin.chiffreAffairesEstimeLait30Jours) : 'Non configuré', 
       unit: fin?.chiffreAffairesEstimeLait30Jours != null ? 'FCFA' : '', 
       change: '', 
       changeDir: 'stable', 
@@ -68,7 +69,7 @@ const kpis = computed(() => {
     },
     { 
       label: 'Marge estimée (30 jours)', 
-      value: fin?.margeEstimeeSurCoutAlimentaire30Jours != null ? fin.margeEstimeeSurCoutAlimentaire30Jours : 'Non configurée', 
+      value: fin?.margeEstimeeSurCoutAlimentaire30Jours != null ? formatNumber(fin.margeEstimeeSurCoutAlimentaire30Jours) : 'Non configurée', 
       unit: fin?.margeEstimeeSurCoutAlimentaire30Jours != null ? 'FCFA' : '', 
       change: '', 
       changeDir: 'stable', 
@@ -317,7 +318,7 @@ function toggleAlertDetails(alertId) {
                 </p>
               </div>
               <div class="production-total">
-                <span class="production-total-value">{{ productionTotal }}</span>
+                <span class="production-total-value">{{ formatNumber(productionTotal) }}</span>
                 <span class="production-total-unit">L</span>
                 <span class="production-change positive">
                   <PhTrendUp :size="14" weight="bold" />
@@ -362,7 +363,7 @@ function toggleAlertDetails(alertId) {
                   <span class="ranking-race">{{ animal.race }}</span>
                 </div>
                 <div class="ranking-value">
-                  <span class="ranking-litres">{{ animal.litres }} L</span>
+                  <span class="ranking-litres">{{ formatNumber(animal.litres) }} L</span>
                   <PhTrendUp
                     v-if="animal.trend === 'up'"
                     :size="14"

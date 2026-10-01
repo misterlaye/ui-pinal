@@ -12,12 +12,17 @@ import SetPrixVenteModal from '../components/SetPrixVenteModal.vue';
 
 const financeData = ref(null);
 const isLoading = ref(true);
+const isRefreshing = ref(false);
 const missingPriceError = ref(false);
 const showChargeModal = ref(false);
 const showPriceModal = ref(false);
 
-const loadData = async () => {
-  isLoading.value = true;
+const loadData = async (isRefresh = false) => {
+  if (isRefresh) {
+    isRefreshing.value = true;
+  } else {
+    isLoading.value = true;
+  }
   missingPriceError.value = false;
   try {
     const data = await getFinanceDashboard();
@@ -30,6 +35,7 @@ const loadData = async () => {
     }
   } finally {
     isLoading.value = false;
+    isRefreshing.value = false;
   }
 };
 
@@ -103,6 +109,12 @@ const openPriceModal = () => {
 
     <div v-else-if="financeData" class="dashboard-content">
       
+      <!-- Refreshing overlay -->
+      <div v-if="isRefreshing" class="refresh-overlay">
+        <div class="refresh-spinner"></div>
+        <span>Actualisation des données...</span>
+      </div>
+      
       <!-- Top KPIs -->
       <section class="section">
         <FinanceKPIs :kpis="financeData.kpis" />
@@ -132,13 +144,13 @@ const openPriceModal = () => {
     <CreateChargeModal 
       :show="showChargeModal" 
       @close="showChargeModal = false" 
-      @charge-created="loadData" 
+      @charge-created="() => loadData(true)" 
     />
 
     <SetPrixVenteModal
       :show="showPriceModal"
       @close="showPriceModal = false"
-      @price-created="loadData"
+      @price-created="() => loadData(true)"
     />
 
   </div>
@@ -265,6 +277,39 @@ const openPriceModal = () => {
   margin-top: 16px;
   justify-content: center;
   width: 100%;
+}
+
+/* Refresh Overlay */
+.refresh-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 50;
+  font-size: 14px;
+  color: var(--text-dark);
+  font-weight: 500;
+}
+
+.refresh-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--text-dark);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Responsive */

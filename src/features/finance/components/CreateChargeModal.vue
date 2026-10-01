@@ -56,6 +56,9 @@ const submitCharge = async () => {
       description: ''
     };
     
+    // Small delay to ensure backend transaction completes
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     emit('charge-created');
     emit('close');
   } catch (err) {

@@ -1,5 +1,6 @@
 <script setup>
 import { PhCoin, PhBowlFood, PhWarehouse, PhCheckCircle, PhTrendUp } from '@phosphor-icons/vue';
+import { formatCurrency, formatNumber } from '../../../utils/formatters.js';
 
 const props = defineProps({
   kpis: {
@@ -7,10 +8,6 @@ const props = defineProps({
     required: true
   }
 });
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('fr-SN', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(value || 0);
-};
 </script>
 
 <template>
@@ -25,7 +22,7 @@ const formatCurrency = (value) => {
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ formatCurrency(kpis.dailyCost).replace('FCFA', '').trim() }} <span class="value-currency">FCFA</span></div>
+        <div class="kpi-value">{{ formatNumber(kpis.dailyCost) }} <span class="value-currency">FCFA</span></div>
         <div class="kpi-trend text-muted">
           <span>Troupeau actif en production</span>
         </div>
@@ -41,7 +38,7 @@ const formatCurrency = (value) => {
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ kpis.averageRation }} <span class="value-unit">kg/j</span></div>
+        <div class="kpi-value">{{ formatNumber(kpis.averageRation) }} <span class="value-unit">kg/j</span></div>
         <div class="kpi-trend text-muted">
           <span class="trend-label">{{ kpis.averageRationLabel || 'kg / vache alimentée' }}</span>
         </div>
@@ -57,7 +54,7 @@ const formatCurrency = (value) => {
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ kpis.stockRemaining }} <span class="value-unit">références</span></div>
+        <div class="kpi-value">{{ formatNumber(kpis.stockRemaining) }} <span class="value-unit">références</span></div>
         <div class="kpi-trend text-muted">
           <span class="trend-label">{{ kpis.stockRemainingLabel || 'Fourrages, concentrés & minéraux' }}</span>
         </div>
@@ -73,7 +70,7 @@ const formatCurrency = (value) => {
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ kpis.efficiency }}<span class="value-unit">%</span></div>
+        <div class="kpi-value">{{ formatNumber(kpis.efficiency) }}<span class="value-unit">%</span></div>
         <div class="kpi-trend text-green">
           <span class="trend-label">{{ kpis.efficiencyLabel || 'Couverture des rations' }}</span>
         </div>

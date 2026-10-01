@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { PhChartBar, PhChartPieSlice, PhChartLine } from '@phosphor-icons/vue';
 import { Bar, Pie } from 'vue-chartjs';
+import { formatCurrency, formatCurrencyCompact } from '../../../utils/formatters.js';
 import {
   Chart as ChartJS,
   Title,
@@ -58,12 +59,7 @@ const totalCharges = computed(() => {
 });
 
 const formattedTotal = computed(() => {
-  return new Intl.NumberFormat('fr-FR', { 
-    style: 'currency', 
-    currency: 'XOF', 
-    notation: 'compact',
-    maximumFractionDigits: 0
-  }).format(totalCharges.value);
+  return formatCurrencyCompact(totalCharges.value);
 });
 
 // Bar Chart Configuration
@@ -113,7 +109,7 @@ const barChartOptions = {
             label += ': ';
           }
           if (context.parsed.y !== null) {
-            label += new Intl.NumberFormat('fr-SN', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(context.parsed.y);
+            label += formatCurrency(context.parsed.y);
           }
           return label;
         }
@@ -191,7 +187,7 @@ const pieChartOptions = computed(() => ({
             label += ': ';
           }
           if (context.parsed !== null) {
-            label += new Intl.NumberFormat('fr-SN', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(context.parsed);
+            label += formatCurrency(context.parsed);
           }
           return label;
         }

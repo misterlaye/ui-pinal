@@ -1,5 +1,6 @@
 <script setup>
 import { PhListDashes } from '@phosphor-icons/vue';
+import { formatCurrencyWithSign } from '../../../utils/formatters.js';
 
 const props = defineProps({
   transactions: {
@@ -7,11 +8,6 @@ const props = defineProps({
     required: true
   }
 });
-
-const formatCurrency = (value) => {
-  const prefix = value > 0 ? '+' : '';
-  return prefix + new Intl.NumberFormat('fr-SN', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(value);
-};
 </script>
 
 <template>
@@ -46,7 +42,7 @@ const formatCurrency = (value) => {
               </span>
             </td>
             <td class="text-right font-bold" :class="item.amount > 0 ? 'text-green' : 'text-red'">
-              {{ formatCurrency(item.amount) }}
+              {{ formatCurrencyWithSign(item.amount) }}
             </td>
           </tr>
         </tbody>

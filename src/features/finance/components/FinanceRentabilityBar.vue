@@ -1,5 +1,6 @@
 <script setup>
 import { PhStar, PhTrendUp, PhTrendDown } from '@phosphor-icons/vue';
+import { formatCurrency, formatNumber } from '../../../utils/formatters.js';
 
 const props = defineProps({
   rentability: {
@@ -7,10 +8,6 @@ const props = defineProps({
     required: true
   }
 });
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('fr-SN', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(value);
-};
 </script>
 
 <template>
@@ -31,14 +28,14 @@ const formatCurrency = (value) => {
     <div class="bar-right">
       <div class="margin-info">
         <span class="margin-label">Marge nette</span>
-        <span class="margin-value">{{ rentability.netMarginPercentage }}%</span>
+        <span class="margin-value">{{ formatNumber(rentability.netMarginPercentage) }}%</span>
       </div>
       <div class="trend-info" :class="rentability.trend >= 0 ? 'text-green-dark' : 'text-red-dark'">
         <span class="trend-label">Évolution vs période préc.</span>
         <span class="trend-value">
           <PhTrendUp v-if="rentability.trend >= 0" :size="14" weight="bold" />
           <PhTrendDown v-else :size="14" weight="bold" />
-          {{ rentability.trend > 0 ? '+' : '' }}{{ rentability.trend }}%
+          {{ rentability.trend > 0 ? '+' : '' }}{{ formatNumber(rentability.trend) }}%
         </span>
       </div>
     </div>
