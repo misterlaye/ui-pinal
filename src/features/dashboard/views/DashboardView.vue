@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import ProductionChart from '../components/ProductionChart.vue';
+import AICopilotPanel from '../components/AICopilotPanel.vue';
 import {
   PhWarningCircle,
   PhWarning,
@@ -13,6 +14,7 @@ import {
   PhCurrencyCircleDollar,
 } from '@phosphor-icons/vue';
 import { getDashboardSummary, getDashboardAnomalies } from '../../../services/dashboard_service.js';
+import { getAICopilotCapability } from '../../../services/ai_copilot_service.js';
 import { getProductionSummary } from '../../../services/production_service.js';
 
 const userName = ref(localStorage.getItem('user_prenom') || 'M. Diallo');
@@ -22,6 +24,8 @@ const alerts = ref([]);
 const summary = ref(null);
 const isLoading = ref(true);
 const error = ref(null);
+const aiCopilotCapability = ref({ enabled: false, disclosure: null, scenarioOptions: [] });
+const expandedAlertId = ref(null);
 
 const productionTotal = computed(() => summary.value?.production?.kgDerniers7Jours || 0);
 const productionChange = ref('+0%');
@@ -85,12 +89,14 @@ const herd = computed(() => {
 onMounted(async () => {
   try {
     isLoading.value = true;
-    const [summaryData, anomaliesData, prodData] = await Promise.all([
+    const [summaryData, anomaliesData, prodData, aiCapability] = await Promise.all([
       getDashboardSummary(),
       getDashboardAnomalies(),
-      getProductionSummary().catch(() => null)
+      getProductionSummary().catch(() => null),
+      getAICopilotCapability().catch(() => ({ enabled: false }))
     ]);
     summary.value = summaryData;
+    aiCopilotCapability.value = aiCapability;
 
     if (prodData) {
       if (prodData.chartData?.labels?.length) {
@@ -108,15 +114,16 @@ onMounted(async () => {
       }
     }
     
-    alerts.value = anomaliesData.map((ano, index) => ({
-      id: index,
-      severity: ano.niveauSeverite === 'HAUTE' ? 'critical' : ano.niveauSeverite === 'MOYENNE' ? 'warning' : 'info',
-      title: `${ano.typeAnomalie} — ${ano.nomAnimal || 'Inconnu'}`,
-      tag: ano.typeAnomalie,
-      tagColor: ano.niveauSeverite === 'HAUTE' ? 'red' : 'yellow',
+    alerts.value = anomaliesData.map((ano) => ({
+      id: ano.id,
+      severity: ano.severite === 'CRITIQUE' ? 'critical' : ano.severite === 'AVERTISSEMENT' ? 'warning' : 'info',
+      title: ano.titre,
+      tag: ano.code,
+      tagColor: ano.severite === 'CRITIQUE' ? 'red' : 'yellow',
       description: ano.description,
-      time: 'Récemment',
-      animalName: ano.nomAnimal || 'Inconnu'
+      time: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ano.dateDetection)),
+      animalId: ano.animalId,
+      anomaly: ano
     }));
 
   } catch (e) {
@@ -145,6 +152,10 @@ function getAnimalColor(rank) {
   const colors = ['#C87533', '#D4915A', '#B0865F', '#8C7053', '#A69278'];
   return colors[(rank - 1) % colors.length];
 }
+
+function toggleAlertDetails(alertId) {
+  expandedAlertId.value = expandedAlertId.value === alertId ? null : alertId;
+}
 </script>
 
 <template>
@@ -154,7 +165,7 @@ function getAnimalColor(rank) {
       <div class="dash-header-left">
         <h1 class="dash-greeting">Bonjour, {{ userName }}</h1>
         <p class="dash-subtext">
-          Thiès, Sénégal • Température moyenne : 31°C • Suivi IA de votre cheptel laitier en temps réel.
+          Thiès, Sénégal • Température moyenne : 31°C • Suivi de votre cheptel laitier en temps réel.
         </p>
       </div>
       <div class="dash-season-badge">
@@ -172,7 +183,7 @@ function getAnimalColor(rank) {
         <span class="dash-section-title-text">ATTENTION REQUISE</span>
         <span class="dash-alert-count">{{ alerts.length }}</span>
         <span class="dash-section-desc">
-          — Événements détectés par l'IA méritant votre intervention immédiate
+          — Événements détectés par Pinal méritant votre attention
         </span>
       </div>
 
@@ -180,9 +191,9 @@ function getAnimalColor(rank) {
         <div
           v-for="alert in alerts"
           :key="alert.id"
-          class="alert-card"
-          :class="`alert-card--${alert.severity}`"
+          class="alert-entry"
         >
+          <div class="alert-card" :class="`alert-card--${alert.severity}`">
           <div class="alert-card-icon">
             <PhWarningCircle
               v-if="alert.severity === 'critical'"
@@ -211,12 +222,23 @@ function getAnimalColor(rank) {
           <div class="alert-card-actions">
             <span class="alert-time">{{ alert.time }}</span>
             <div class="alert-btns">
-              <button class="alert-btn alert-btn--accent">
-                Voir {{ alert.animalName }}
+              <button
+                v-if="aiCopilotCapability.enabled"
+                class="alert-btn alert-btn--outline"
+                type="button"
+                :aria-expanded="expandedAlertId === alert.id"
+                @click="toggleAlertDetails(alert.id)"
+              >
+                {{ expandedAlertId === alert.id ? 'Masquer' : 'Détails' }}
               </button>
-              <button class="alert-btn alert-btn--outline">Détails</button>
             </div>
           </div>
+          </div>
+          <AICopilotPanel
+            v-if="expandedAlertId === alert.id"
+            :anomaly="alert.anomaly"
+            :capability="aiCopilotCapability"
+          />
         </div>
       </div>
     </section>
@@ -517,6 +539,10 @@ function getAnimalColor(rank) {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   overflow: hidden;
+}
+
+.alert-entry {
+  background: var(--bg-white);
 }
 
 .alert-card {
