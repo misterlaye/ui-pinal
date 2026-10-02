@@ -29,8 +29,9 @@ const summary = ref(null);
 const isLoading = ref(true);
 const showError = ref(false);
 const errorMessage = ref('');
-const aiCopilotCapability = ref({ enabled: false, disclosure: null, scenarioOptions: [] });
+const aiCopilotCapability = ref({ enabled: false, disclosure: null, scenarioOptions: [], _checked: false });
 const expandedAlertId = ref(null);
+const isLoadingAICapability = ref(false);
 
 const productionTotal = computed(() => summary.value?.production?.kgDerniers7Jours || 0);
 const productionChange = ref('+0%');
@@ -96,15 +97,13 @@ async function loadDashboard() {
     isLoading.value = true;
     showError.value = false;
     
-    const [summaryData, anomaliesData, prodData, aiCapability] = await Promise.all([
+    const [summaryData, anomaliesData, prodData] = await Promise.all([
       getDashboardSummary(),
       getDashboardAnomalies(),
-      getProductionSummary().catch(() => null),
-      getAICopilotCapability().catch(() => ({ enabled: false }))
+      getProductionSummary().catch(() => null)
     ]);
     
     summary.value = summaryData;
-    aiCopilotCapability.value = aiCapability;
 
     if (prodData && prodData.chartData?.labels?.length > 0) {
       productionLabels.value = prodData.chartData.labels;
@@ -142,6 +141,23 @@ async function loadDashboard() {
   }
 }
 
+async function loadAICapability() {
+  if (aiCopilotCapability.value._checked) {
+    return;
+  }
+  
+  try {
+    isLoadingAICapability.value = true;
+    const capability = await getAICopilotCapability();
+    aiCopilotCapability.value = { ...capability, _checked: true };
+  } catch (e) {
+    aiCopilotCapability.value = { enabled: false, _checked: true };
+    console.error('Failed to load AI capability:', e);
+  } finally {
+    isLoadingAICapability.value = false;
+  }
+}
+
 onMounted(() => {
   loadDashboard();
 });
@@ -166,7 +182,12 @@ function getAnimalColor(rank) {
 }
 
 function toggleAlertDetails(alertId) {
-  expandedAlertId.value = expandedAlertId.value === alertId ? null : alertId;
+  if (expandedAlertId.value === alertId) {
+    expandedAlertId.value = null;
+  } else {
+    expandedAlertId.value = alertId;
+    loadAICapability();
+  }
 }
 </script>
 
@@ -281,10 +302,10 @@ function toggleAlertDetails(alertId) {
               <span class="alert-time">{{ alert.time }}</span>
               <div class="alert-btns">
                 <button
-                  v-if="aiCopilotCapability.enabled"
                   class="alert-btn alert-btn--outline"
                   type="button"
                   :aria-expanded="expandedAlertId === alert.id"
+                  :disabled="isLoadingAICapability"
                   @click="toggleAlertDetails(alert.id)"
                 >
                   {{ expandedAlertId === alert.id ? 'Masquer' : 'Détails' }}
@@ -293,10 +314,22 @@ function toggleAlertDetails(alertId) {
             </div>
             </div>
             <AICopilotPanel
-              v-if="expandedAlertId === alert.id"
+              v-if="expandedAlertId === alert.id && aiCopilotCapability.enabled"
               :anomaly="alert.anomaly"
               :capability="aiCopilotCapability"
             />
+            <div 
+              v-else-if="expandedAlertId === alert.id && isLoadingAICapability"
+              style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;"
+            >
+              Chargement de l'analyse IA...
+            </div>
+            <div 
+              v-else-if="expandedAlertId === alert.id && !aiCopilotCapability.enabled"
+              style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;"
+            >
+              Copilot IA non disponible pour le moment.
+            </div>
           </div>
         </div>
       </section>
@@ -706,6 +739,11 @@ function toggleAlertDetails(alertId) {
 
 .alert-btn--outline:hover {
   background: var(--bg-page);
+}
+
+.alert-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* --- Production Grid --- */
