@@ -92,52 +92,107 @@ const herd = computed(() => {
   };
 });
 
-async function loadDashboard() {
+async function loadDashboard(retryCount = 0) {
+  const startTime = Date.now();
+  
   try {
     isLoading.value = true;
     showError.value = false;
     
-    const [summaryData, anomaliesData, prodData] = await Promise.all([
+    // Use Promise.allSettled to allow partial success
+    const [summaryResult, anomaliesResult, prodResult] = await Promise.allSettled([
       getDashboardSummary(),
       getDashboardAnomalies(),
-      getProductionSummary().catch(() => null)
+      getProductionSummary()
     ]);
     
-    summary.value = summaryData;
+    // Process summary data
+    if (summaryResult.status === 'fulfilled') {
+      summary.value = summaryResult.value;
+      console.log(`Dashboard summary loaded in ${Date.now() - startTime}ms`);
+    } else {
+      console.error(`Dashboard summary failed after ${Date.now() - startTime}ms:`, summaryResult.reason);
+    }
 
-    if (prodData && prodData.chartData?.labels?.length > 0) {
-      productionLabels.value = prodData.chartData.labels;
-      productionData.value = prodData.chartData.currentWeek || [];
+    // Process production data
+    if (prodResult.status === 'fulfilled' && prodResult.value) {
+      const prodData = prodResult.value;
+      if (prodData.chartData?.labels?.length > 0) {
+        productionLabels.value = prodData.chartData.labels;
+        productionData.value = prodData.chartData.currentWeek || [];
+      }
+      
+      if (prodData.animalProduction?.length) {
+        topAnimals.value = prodData.animalProduction.slice(0, 4).map((a, idx) => ({
+          rank: idx + 1,
+          name: a.name,
+          race: a.race || 'Non spécifiée',
+          litres: a.total,
+          trend: a.trend >= 0 ? 'up' : 'down'
+        }));
+      }
+      console.log(`Production data loaded in ${Date.now() - startTime}ms`);
+    } else {
+      console.warn('Production data failed or empty:', prodResult.reason || 'No data');
     }
     
-    if (prodData?.animalProduction?.length) {
-      topAnimals.value = prodData.animalProduction.slice(0, 4).map((a, idx) => ({
-        rank: idx + 1,
-        name: a.name,
-        race: a.race || 'Non spécifiée',
-        litres: a.total,
-        trend: a.trend >= 0 ? 'up' : 'down'
+    // Process anomalies data
+    if (anomaliesResult.status === 'fulfilled') {
+      alerts.value = anomaliesResult.value.map((ano) => ({
+        id: ano.id,
+        severity: ano.severite === 'CRITIQUE' ? 'critical' : ano.severite === 'AVERTISSEMENT' ? 'warning' : 'info',
+        title: ano.titre,
+        tag: ano.code,
+        tagColor: ano.severite === 'CRITIQUE' ? 'red' : 'yellow',
+        description: ano.description,
+        time: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ano.dateDetection)),
+        animalId: ano.animalId,
+        anomaly: ano
       }));
+      console.log(`Anomalies loaded in ${Date.now() - startTime}ms`);
+    } else {
+      console.warn('Anomalies failed:', anomaliesResult.reason);
+      alerts.value = [];
     }
     
-    alerts.value = anomaliesData.map((ano) => ({
-      id: ano.id,
-      severity: ano.severite === 'CRITIQUE' ? 'critical' : ano.severite === 'AVERTISSEMENT' ? 'warning' : 'info',
-      title: ano.titre,
-      tag: ano.code,
-      tagColor: ano.severite === 'CRITIQUE' ? 'red' : 'yellow',
-      description: ano.description,
-      time: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ano.dateDetection)),
-      animalId: ano.animalId,
-      anomaly: ano
-    }));
+    // Check if critical APIs failed (summary and anomalies)
+    const criticalFailures = [summaryResult, anomaliesResult].filter(r => r.status === 'rejected');
+    
+    if (criticalFailures.length === 2) {
+      // All critical APIs failed - retry or show error
+      throw summaryResult.reason || anomaliesResult.reason || new Error('Toutes les APIs critiques ont échoué');
+    }
+    
+    // If we got here, at least one critical API succeeded
+    isLoading.value = false;
 
   } catch (e) {
-    showError.value = true;
-    errorMessage.value = "Erreur de chargement du tableau de bord. Vérifiez votre connexion.";
-    console.error(e);
-  } finally {
+    console.error('Dashboard load error:', e);
+    
+    // Retry logic with exponential backoff
+    if (retryCount < 2) {
+      const delay = Math.pow(2, retryCount) * 2000; // 2s, 4s
+      console.log(`Retrying dashboard load in ${delay}ms (attempt ${retryCount + 1}/2)...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return loadDashboard(retryCount + 1);
+    }
+    
+    // Show specific error after retries exhausted
     isLoading.value = false;
+    showError.value = true;
+    
+    // Determine specific error message
+    if (e.code === 'ECONNABORTED' || e.message?.includes('timeout')) {
+      errorMessage.value = "Le serveur met trop de temps à répondre. Veuillez patienter ou réessayer.";
+    } else if (e.response?.status === 401) {
+      errorMessage.value = "Session expirée. Veuillez vous reconnecter.";
+    } else if (e.response?.status >= 500) {
+      errorMessage.value = "Le serveur rencontre des difficultés. Veuillez réessayer dans quelques instants.";
+    } else if (!navigator.onLine) {
+      errorMessage.value = "Aucune connexion internet détectée.";
+    } else {
+      errorMessage.value = "Erreur lors du chargement du tableau de bord. Veuillez réessayer.";
+    }
   }
 }
 
@@ -202,6 +257,15 @@ function toggleAlertDetails(alertId) {
 
     <!-- Loading State with Skeleton -->
     <template v-if="isLoading">
+      <!-- Loading message for long operations -->
+      <div class="loading-message">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">
+          <p class="loading-title">Chargement du tableau de bord...</p>
+          <p class="loading-tip">Calcul des indicateurs financiers et analyse du troupeau en cours</p>
+        </div>
+      </div>
+      
       <!-- Header Skeleton -->
       <section class="dash-header">
         <div class="dash-header-left">
@@ -485,6 +549,48 @@ function toggleAlertDetails(alertId) {
   flex-direction: column;
   gap: 24px;
   padding-bottom: 40px;
+}
+
+/* --- Loading Message --- */
+.loading-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  margin-bottom: 16px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  text-align: left;
+}
+
+.loading-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+
+.loading-tip {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 /* --- Card base --- */

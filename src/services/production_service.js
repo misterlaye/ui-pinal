@@ -1,4 +1,4 @@
-import { apiClient } from './api_client.js';
+import { apiClient, apiClientLong } from './api_client.js';
 
 /**
  * Service pour le module Production.
@@ -6,7 +6,7 @@ import { apiClient } from './api_client.js';
 
 export const getProductionSummary = async () => {
   try {
-    const { data } = await apiClient.get('/production/dashboard');
+    const { data } = await apiClientLong.get('/production/dashboard');
     return data;
   } catch (error) {
     console.error("Failed to fetch production summary", error);
