@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useOnboarding } from '../../../composables/useOnboarding.js';
@@ -28,8 +29,7 @@ async function handleRequestOtp() {
     setStep(2); // Verify OTP step
     router.push({ name: 'onboarding-verify-otp' });
   } catch (err) {
-    error.value = "Erreur lors de l'envoi du code. Veuillez réessayer.";
-    console.error(err);
+    error.value = apiErrorMessage(err, "Erreur lors de l'envoi du code. Veuillez réessayer.");
   } finally {
     isLoading.value = false;
   }

@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useOnboarding } from '../../../composables/useOnboarding.js';
@@ -84,7 +85,7 @@ async function handleVerify(code) {
       router.push({ name: 'onboarding-create-exploitation' });
     }
   } catch (err) {
-    error.value = err.response?.data?.message || 'Code OTP invalide. Veuillez réessayer.';
+    error.value = apiErrorMessage(err, 'Code OTP invalide. Veuillez réessayer.');
   } finally {
     loading.value = false;
   }

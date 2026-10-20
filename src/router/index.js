@@ -146,16 +146,6 @@ const routes = [
         path: 'history',
         name: 'worker-history',
         component: () => import('../features/worker/views/WorkerHistoryView.vue'),
-      },
-      {
-        path: 'alerts',
-        name: 'worker-alerts',
-        component: () => import('../features/worker/views/WorkerHomeView.vue'), // To implement later
-      },
-      {
-        path: 'profile',
-        name: 'worker-profile',
-        component: () => import('../features/worker/views/WorkerHomeView.vue'), // To implement later
       }
     ]
   }

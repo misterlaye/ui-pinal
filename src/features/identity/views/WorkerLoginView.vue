@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { verifyPin } from '../../../services/auth_service.js';
@@ -35,7 +36,7 @@ async function handleLogin() {
     // Auto-redirect handles the case if they have exactly 1 exploitation
     router.push({ name: 'select-exploitation' });
   } catch (err) {
-    errorMsg.value = err.response?.data?.message || 'Identifiants incorrects. Veuillez réessayer.';
+    errorMsg.value = apiErrorMessage(err, 'Identifiants incorrects. Veuillez réessayer.');
   } finally {
     loading.value = false;
   }

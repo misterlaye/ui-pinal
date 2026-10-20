@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted, computed } from 'vue';
 import { PhUserPlus, PhUsers, PhShieldCheck, PhPhone, PhTrash } from '@phosphor-icons/vue';
 import { listMembers, addMember } from '../../../services/exploitation_service.js';
@@ -32,7 +33,8 @@ async function fetchMembers() {
     loading.value = true;
     members.value = await listMembers(expId);
   } catch (err) {
-    console.error('Erreur chargement équipe', err);
+    inviteError.value = '';
+    alert(apiErrorMessage(err, "Impossible de charger l'équipe."));
   } finally {
     loading.value = false;
   }
@@ -54,13 +56,14 @@ async function handleInvite() {
       role: inviteRole.value,
     });
     
-    generatedPin.value = response.codePin;
+    // Le PIN n'est communiqué qu'une seule fois, à sa génération. S'il existait déjà, il n'est jamais renvoyé.
+    generatedPin.value = response.codePin || '';
     createdMember.value = response;
     inviteSuccess.value = true;
     
     await fetchMembers();
   } catch (err) {
-    inviteError.value = err.response?.data?.message || 'Erreur lors de l\'invitation.';
+    inviteError.value = apiErrorMessage(err, "Erreur lors de l'invitation.");
   } finally {
     inviteLoading.value = false;
   }
@@ -161,15 +164,21 @@ function closeModal() {
 
         <div v-if="inviteSuccess" class="invite-success">
           <span class="success-check">✓</span>
-          <p class="success-title">Compte créé avec succès !</p>
-          <div class="pin-box">
-            <span class="pin-label">Code Secret (PIN) :</span>
-            <strong class="pin-code">{{ generatedPin }}</strong>
-          </div>
-          
-          <a :href="getWhatsAppLink()" target="_blank" class="whatsapp-btn">
-            Partager sur WhatsApp
-          </a>
+          <p class="success-title">Membre ajouté avec succès !</p>
+          <template v-if="generatedPin">
+            <div class="pin-box">
+              <span class="pin-label">Code Secret (PIN) :</span>
+              <strong class="pin-code">{{ generatedPin }}</strong>
+            </div>
+            <p class="pin-warning">Notez ou partagez ce code maintenant : il ne sera plus jamais affiché.</p>
+
+            <a :href="getWhatsAppLink()" target="_blank" class="whatsapp-btn">
+              Partager sur WhatsApp
+            </a>
+          </template>
+          <p v-else class="pin-warning">
+            Ce membre possède déjà un code PIN personnel : il se connecte avec celui-ci.
+          </p>
         </div>
 
         <form v-else @submit.prevent="handleInvite" class="invite-form">
@@ -580,6 +589,13 @@ function closeModal() {
   font-weight: 700;
   color: var(--text-dark);
   margin-bottom: 24px;
+}
+
+.pin-warning {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 12px 0;
+  text-align: center;
 }
 
 .pin-box {

@@ -14,6 +14,7 @@ export async function requestOtp(telephone) {
  */
 export async function verifyOtp(telephone, code) {
   const { data } = await apiClient.post('/auth/otp/verify', { telephone, code });
+  localStorage.setItem('auth_method', 'OTP');
 
   if (data.accessToken) {
     localStorage.setItem('jwt_token', data.accessToken);
@@ -33,6 +34,8 @@ export async function verifyOtp(telephone, code) {
  */
 export async function verifyPin(telephone, code) {
   const { data } = await apiClient.post('/auth/pin/verify', { telephone, code });
+  // Session PIN : limitée par le serveur aux exploitations où l'utilisateur est ouvrier.
+  localStorage.setItem('auth_method', 'PIN');
 
   if (data.accessToken) {
     localStorage.setItem('jwt_token', data.accessToken);
