@@ -6,6 +6,7 @@ import ErrorBanner from '../../../components/shared/ErrorBanner.vue';
 import KpiCard from '../../../components/shared/KpiCard.vue';
 import { SkeletonCard, SkeletonChart, SkeletonText } from '../../../components/skeleton';
 import { formatNumber } from '../../../utils/formatters.js';
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import {
   PhWarningCircle,
   PhWarning,
@@ -21,7 +22,7 @@ import { getDashboardSummary, getDashboardAnomalies } from '../../../services/da
 import { getAICopilotCapability } from '../../../services/ai_copilot_service.js';
 import { getProductionSummary } from '../../../services/production_service.js';
 
-const userName = ref(localStorage.getItem('user_prenom') || 'M. Diallo');
+const userName = ref(localStorage.getItem('user_prenom') || '');
 const exploitationName = ref(localStorage.getItem('exploitation_name') || 'Mon exploitation');
 
 const alerts = ref([]);
@@ -33,49 +34,35 @@ const aiCopilotCapability = ref({ enabled: false, disclosure: null, scenarioOpti
 const expandedAlertId = ref(null);
 const isLoadingAICapability = ref(false);
 
-const productionTotal = computed(() => summary.value?.production?.kgDerniers7Jours || 0);
-const productionChange = ref('+0%');
+const productionTotal = computed(() => summary.value?.production?.litresDerniers7Jours ?? null);
 const productionLabels = ref([]);
 const productionData = ref([]);
 
 const topAnimals = ref([]);
 
+/**
+ * Indicateurs économiques des 30 derniers jours, calculés par le module Finance (mêmes règles que
+ * l'écran Finances). Une valeur non calculable est affichée comme telle, avec sa cause — jamais 0.
+ */
 const kpis = computed(() => {
   if (!summary.value) return [];
-  const fin = summary.value.finance;
+  const fin = summary.value.finance || {};
+  const periode = fin.derniers30Jours || {};
+  const cause = (periode.avertissements || [])[0]?.message || 'Données insuffisantes';
+  const montant = (valeur, unit, note) => valeur != null
+    ? { value: formatNumber(valeur), unit, note }
+    : { value: 'Non calculable', unit: '', note: cause };
   return [
-    { 
-      label: 'Coût de revient moyen', 
-      value: fin?.coutMoyenRationParJour != null ? formatNumber(fin.coutMoyenRationParJour) : '—', 
-      unit: fin?.coutMoyenRationParJour != null ? 'FCFA / j' : '', 
-      change: '', 
-      changeDir: 'stable', 
-      note: 'Coût ration' 
+    { label: 'Coût de revient (30 j)', change: '', changeDir: 'stable', ...montant(periode.coutRevientParLitre, 'FCFA / L', 'Coût total / litre') },
+    {
+      label: 'Prix du lait actuel',
+      change: '', changeDir: 'stable',
+      value: fin.prixLaitActuelParLitre != null ? formatNumber(fin.prixLaitActuelParLitre) : 'Non configuré',
+      unit: fin.prixLaitActuelParLitre != null ? 'FCFA / L' : '',
+      note: fin.prixLaitActuelParLitre != null ? "Prix applicable aujourd'hui" : 'Définissez un prix dans Finances',
     },
-    { 
-      label: 'Prix moyen de vente', 
-      value: fin?.prixMoyenLaitParKg != null ? formatNumber(fin.prixMoyenLaitParKg) : 'Non configuré', 
-      unit: fin?.prixMoyenLaitParKg != null ? 'FCFA / L' : '', 
-      change: '', 
-      changeDir: 'stable', 
-      note: 'Prix du lait' 
-    },
-    { 
-      label: 'CA estimé (30 jours)', 
-      value: fin?.chiffreAffairesEstimeLait30Jours != null ? formatNumber(fin.chiffreAffairesEstimeLait30Jours) : 'Non configuré', 
-      unit: fin?.chiffreAffairesEstimeLait30Jours != null ? 'FCFA' : '', 
-      change: '', 
-      changeDir: 'stable', 
-      note: 'Estimé' 
-    },
-    { 
-      label: 'Marge estimée (30 jours)', 
-      value: fin?.margeEstimeeSurCoutAlimentaire30Jours != null ? formatNumber(fin.margeEstimeeSurCoutAlimentaire30Jours) : 'Non configurée', 
-      unit: fin?.margeEstimeeSurCoutAlimentaire30Jours != null ? 'FCFA' : '', 
-      change: '', 
-      changeDir: 'stable', 
-      note: 'Estimée' 
-    },
+    { label: "Chiffre d'affaires (30 j)", change: '', changeDir: 'stable', ...montant(periode.chiffreAffaires, 'FCFA', 'Lait valorisé au prix du jour') },
+    { label: 'Marge (30 j)', change: '', changeDir: 'stable', ...montant(periode.marge, 'FCFA', 'CA − alimentation − charges') },
   ];
 });
 
@@ -109,9 +96,10 @@ async function loadDashboard(retryCount = 0) {
     // Process summary data
     if (summaryResult.status === 'fulfilled') {
       summary.value = summaryResult.value;
-      console.log(`Dashboard summary loaded in ${Date.now() - startTime}ms`);
-    } else {
-      console.error(`Dashboard summary failed after ${Date.now() - startTime}ms:`, summaryResult.reason);
+    } else if (anomaliesResult.status === 'fulfilled') {
+      // Échec partiel : signalé, jamais remplacé par des valeurs vides.
+      showError.value = true;
+      errorMessage.value = 'Indicateurs indisponibles : ' + apiErrorMessage(summaryResult.reason);
     }
 
     // Process production data
@@ -128,12 +116,13 @@ async function loadDashboard(retryCount = 0) {
           name: a.name,
           race: a.race || 'Non spécifiée',
           litres: a.total,
-          trend: a.trend >= 0 ? 'up' : 'down'
+          trend: a.trend == null ? null : a.trend >= 0 ? 'up' : 'down'
         }));
       }
       console.log(`Production data loaded in ${Date.now() - startTime}ms`);
-    } else {
-      console.warn('Production data failed or empty:', prodResult.reason || 'No data');
+    } else if (prodResult.status === 'rejected') {
+      showError.value = true;
+      errorMessage.value = 'Graphique de production indisponible : ' + apiErrorMessage(prodResult.reason);
     }
     
     // Process anomalies data
@@ -415,12 +404,8 @@ function toggleAlertDetails(alertId) {
                 </p>
               </div>
               <div class="production-total">
-                <span class="production-total-value">{{ formatNumber(productionTotal) }}</span>
+                <span class="production-total-value">{{ productionTotal != null ? formatNumber(productionTotal) : '—' }}</span>
                 <span class="production-total-unit">L</span>
-                <span class="production-change positive">
-                  <PhTrendUp :size="14" weight="bold" />
-                  {{ productionChange }}
-                </span>
                 <span class="production-total-period">Total sur 7 jours</span>
               </div>
             </div>
@@ -468,7 +453,7 @@ function toggleAlertDetails(alertId) {
                     color="#16A34A"
                   />
                   <PhTrendDown
-                    v-else
+                    v-else-if="animal.trend === 'down'"
                     :size="14"
                     weight="bold"
                     color="#EF4444"
@@ -488,10 +473,10 @@ function toggleAlertDetails(alertId) {
         <div class="dash-section-header">
           <PhCurrencyCircleDollar :size="18" weight="regular" color="#C87533" />
           <span class="dash-section-title-text">Indicateurs économiques et rentabilité</span>
-          <a href="#" class="dash-section-link">
+          <router-link :to="{ name: 'dashboard-finances' }" class="dash-section-link">
             Voir le détail financier
             <PhArrowRight :size="14" weight="bold" />
-          </a>
+          </router-link>
         </div>
 
         <div class="kpi-grid">

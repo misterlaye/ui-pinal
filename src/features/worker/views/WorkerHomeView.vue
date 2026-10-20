@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { PhDrop, PhCaretRight, PhKnife, PhCheck } from '@phosphor-icons/vue';
@@ -11,6 +12,7 @@ const router = useRouter();
 const { getActiveExploitation } = useExploitation();
 const isMilkingModalOpen = ref(false);
 const homeData = ref(null);
+const loadError = ref('');
 const user = ref(null);
 
 async function loadHomeData() {
@@ -19,8 +21,9 @@ async function loadHomeData() {
     try {
       user.value = await getCurrentUser();
       homeData.value = await getWorkerHomeData(exploitationId);
+      loadError.value = '';
     } catch (err) {
-      console.error(err);
+      loadError.value = apiErrorMessage(err, "Impossible de charger l'accueil.");
     }
   }
 }
@@ -41,22 +44,22 @@ async function handleMilkingSubmit(data) {
     // we need its ID to post to the API
     await recordAnimalMilking(data.animal.id, {
       dateHeure: new Date().toISOString(),
-      type: 'MATIN', // Assuming MATIN for now
-      quantiteKg: data.quantity
+      type: data.type,
+      quantiteLitres: data.quantity
     });
     
     // Refresh the home data
     isMilkingModalOpen.value = false;
     await loadHomeData(); 
   } catch (err) {
-    console.error("Erreur lors de l'enregistrement", err);
-    alert("Erreur lors de l'enregistrement de la traite.");
+    alert(apiErrorMessage(err, "Erreur lors de l'enregistrement de la traite."));
   }
 }
 </script>
 
 <template>
   <div class="worker-home">
+    <p v-if="loadError" class="load-error" role="alert">{{ loadError }}</p>
     <!-- Milking Modal Overlay -->
     <WorkerMilkingModal 
       :is-open="isMilkingModalOpen" 
@@ -66,7 +69,7 @@ async function handleMilkingSubmit(data) {
     
     <header class="home-header">
       <div class="header-top">
-        <span class="tag tag-black">POSTE DU MATIN</span>
+        <span class="tag tag-black">POSTE DU {{ homeData?.seance === 'SOIR' ? 'SOIR' : 'MATIN' }}</span>
         <div class="status">
           <span class="status-dot"></span>
           EN LIGNE
@@ -105,15 +108,15 @@ async function handleMilkingSubmit(data) {
     <template v-if="homeData">
       <!-- Progress Card -->
       <div class="progress-card">
-        <span class="tag tag-outline">TRAITE DU MATIN</span>
-        <h3 class="progress-title">{{ homeData.traitesDuMatin }} / {{ homeData.totalAnimaux }} animaux</h3>
-        <span class="progress-pct">{{ Math.round((homeData.traitesDuMatin / homeData.totalAnimaux) * 100) || 0 }}%</span>
+        <span class="tag tag-outline">TRAITE DU {{ homeData.seance === 'SOIR' ? 'SOIR' : 'MATIN' }}</span>
+        <h3 class="progress-title">{{ homeData.traitesSeance }} / {{ homeData.totalLactationAnimaux }} vaches en lactation</h3>
+        <span class="progress-pct">{{ Math.round((homeData.traitesSeance / homeData.totalLactationAnimaux) * 100) || 0 }}%</span>
         <div class="progress-track">
-          <div class="progress-fill" :style="{ width: ((homeData.traitesDuMatin / homeData.totalAnimaux) * 100) + '%' }"></div>
+          <div class="progress-fill" :style="{ width: (homeData.totalLactationAnimaux ? (homeData.traitesSeance / homeData.totalLactationAnimaux) * 100 : 0) + '%' }"></div>
         </div>
         <div class="progress-footer">
-          <span class="val">{{ homeData.volumeCollecteMatin.toFixed(1) }} L <span class="val-sub">collectés</span></span>
-          <span class="val-sub">{{ homeData.totalAnimaux - homeData.traitesDuMatin }} restants</span>
+          <span class="val">{{ homeData.volumeSeance.toFixed(1) }} L <span class="val-sub">collectés</span></span>
+          <span class="val-sub">{{ Math.max(homeData.totalLactationAnimaux - homeData.traitesSeance, 0) }} restantes</span>
         </div>
       </div>
 
@@ -167,6 +170,14 @@ async function handleMilkingSubmit(data) {
 </template>
 
 <style scoped>
+.load-error {
+  margin: 12px 16px;
+  padding: 12px;
+  border: 2px solid #B91C1C;
+  background: #FEF2F2;
+  color: #7F1D1D;
+}
+
 .worker-home {
   padding: 24px 20px;
   display: flex;

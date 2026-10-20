@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { PhArrowLeft, PhDrop } from '@phosphor-icons/vue';
@@ -14,13 +15,14 @@ const isMilkingModalOpen = ref(false);
 const isAlertModalOpen = ref(false);
 const animal = ref(null);
 const loading = ref(true);
+const loadError = ref('');
 
 async function loadAnimal() {
   const animalId = route.params.id;
   try {
     animal.value = await getWorkerAnimalDetail(animalId);
   } catch (err) {
-    console.error(err);
+    loadError.value = apiErrorMessage(err, "Impossible de charger la fiche de l'animal.");
   } finally {
     loading.value = false;
   }
@@ -36,14 +38,13 @@ async function handleMilkingSubmit(data) {
   try {
     await recordAnimalMilking(animal.value.id, {
       dateHeure: new Date().toISOString(),
-      type: 'MATIN', // Assuming MATIN
-      quantiteKg: data.quantity
+      type: data.type,
+      quantiteLitres: data.quantity
     });
     isMilkingModalOpen.value = false;
     await loadAnimal(); // Refresh data
   } catch(err) {
-    console.error("Erreur", err);
-    alert("Erreur lors de l'enregistrement");
+    alert(apiErrorMessage(err, "Erreur lors de l'enregistrement de la traite."));
   }
 }
 
@@ -57,13 +58,14 @@ async function handleAlertSubmit(payload) {
     alert("Alerte envoyée au propriétaire !");
   } catch(err) {
     console.error("Erreur envoi alerte", err);
-    alert("Erreur lors de l'envoi de l'alerte.");
+    alert(apiErrorMessage(err, "Erreur lors de l'envoi de l'alerte."));
   }
 }
 </script>
 
 <template>
   <div class="worker-animal-detail">
+    <p v-if="loadError" class="load-error" role="alert">{{ loadError }}</p>
     
     <!-- Milking Modal Overlay -->
     <WorkerMilkingModal 
@@ -156,6 +158,14 @@ async function handleAlertSubmit(payload) {
 </template>
 
 <style scoped>
+.load-error {
+  margin: 12px 16px;
+  padding: 12px;
+  border: 2px solid #B91C1C;
+  background: #FEF2F2;
+  color: #7F1D1D;
+}
+
 .worker-animal-detail {
   padding: 20px;
   display: flex;

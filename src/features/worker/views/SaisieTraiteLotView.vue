@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { PhArrowLeft, PhCheck, PhDrop } from '@phosphor-icons/vue';
@@ -12,7 +13,10 @@ const loading = ref(true);
 const isSubmitting = ref(false);
 
 const quantities = ref({});
-const milkingType = ref('MATIN');
+const milkingType = ref(new Date().getHours() < 12 ? 'MATIN' : 'SOIR');
+// Lignes refusées par le serveur (motif par animal) : affichées, la saisie correspondante est conservée.
+const rejets = ref([]);
+const errorMessage = ref('');
 
 const { getActiveExploitation } = useExploitation();
 
@@ -27,7 +31,7 @@ onMounted(async () => {
       quantities.value[a.id] = '';
     });
   } catch (err) {
-    console.error(err);
+    errorMessage.value = apiErrorMessage(err, 'Impossible de charger les animaux.');
   } finally {
     loading.value = false;
   }
@@ -62,7 +66,7 @@ async function submitBatch() {
     if (!isNaN(val) && val > 0) {
       items.push({
         animalId: id,
-        quantiteKg: val
+        quantiteLitres: val
       });
     }
   }
@@ -73,14 +77,40 @@ async function submitBatch() {
     items
   };
 
+  errorMessage.value = '';
+  rejets.value = [];
   try {
-    await recordBatchMilking(payload);
-    router.push({ name: 'worker-home' });
+    const result = await recordBatchMilking(payload);
+    applyResult(result);
   } catch (err) {
-    console.error("Erreur lors de l'enregistrement du lot", err);
-    alert("Erreur lors de l'enregistrement de la traite.");
+    if (err.response?.status === 422 && err.response.data?.rejets) {
+      // Aucune ligne enregistrée : chaque refus est expliqué.
+      applyResult(err.response.data);
+    } else {
+      errorMessage.value = apiErrorMessage(err, "Erreur lors de l'enregistrement de la traite.");
+    }
   } finally {
     isSubmitting.value = false;
+  }
+}
+
+function applyResult(result) {
+  const enregistrees = result?.enregistrees || [];
+  rejets.value = (result?.rejets || []).map(r => ({
+    ...r,
+    animal: animals.value.find(a => a.id === r.animalId)
+  }));
+  // Les quantités enregistrées sont retirées du formulaire ; les refusées restent pour correction.
+  const refuses = new Set(rejets.value.map(r => r.animalId));
+  for (const id in quantities.value) {
+    if (!refuses.has(id)) quantities.value[id] = '';
+  }
+  if (rejets.value.length === 0) {
+    router.push({ name: 'worker-home' });
+  } else if (enregistrees.length > 0) {
+    errorMessage.value = `${enregistrees.length} traite(s) enregistrée(s). ${rejets.value.length} ligne(s) refusée(s) :`;
+  } else {
+    errorMessage.value = 'Aucune traite enregistrée :';
   }
 }
 </script>
@@ -106,6 +136,15 @@ async function submitBatch() {
         <input type="radio" v-model="milkingType" value="SOIR" />
         SOIR
       </label>
+    </div>
+
+    <div v-if="errorMessage" class="batch-feedback" role="alert">
+      <p>{{ errorMessage }}</p>
+      <ul v-if="rejets.length">
+        <li v-for="rejet in rejets" :key="rejet.animalId || rejet.motif">
+          <strong>{{ rejet.animal ? `#${rejet.animal.identifiant} ${rejet.animal.name}` : 'Animal' }}</strong> — {{ rejet.motif }}
+        </li>
+      </ul>
     </div>
 
     <div v-if="loading" class="loading">Chargement des animaux...</div>
@@ -153,6 +192,20 @@ async function submitBatch() {
 </template>
 
 <style scoped>
+.batch-feedback {
+  margin: 0 16px 12px;
+  padding: 12px;
+  border: 2px solid #B91C1C;
+  background: #FEF2F2;
+  color: #7F1D1D;
+  font-size: 14px;
+}
+
+.batch-feedback ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
 .batch-milking {
   display: flex;
   flex-direction: column;

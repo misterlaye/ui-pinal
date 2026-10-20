@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { PhMagnifyingGlass, PhCaretRight } from '@phosphor-icons/vue';
@@ -10,6 +11,7 @@ const { getActiveExploitation } = useExploitation();
 const searchQuery = ref('');
 const animals = ref([]);
 const loading = ref(true);
+const loadError = ref('');
 
 onMounted(async () => {
   const exploitationId = getActiveExploitation();
@@ -17,7 +19,7 @@ onMounted(async () => {
     try {
       animals.value = await getWorkerAnimals(exploitationId);
     } catch (err) {
-      console.error(err);
+      loadError.value = apiErrorMessage(err, 'Impossible de charger les animaux.');
     } finally {
       loading.value = false;
     }
@@ -39,6 +41,7 @@ function goToAnimal(id) {
 
 <template>
   <div class="worker-animals-view">
+    <p v-if="loadError" class="load-error" role="alert">{{ loadError }}</p>
     
     <header class="page-header">
       <div class="tag tag-outline">CHEPTEL</div>
@@ -86,6 +89,14 @@ function goToAnimal(id) {
 </template>
 
 <style scoped>
+.load-error {
+  margin: 12px 16px;
+  padding: 12px;
+  border: 2px solid #B91C1C;
+  background: #FEF2F2;
+  color: #7F1D1D;
+}
+
 .worker-animals-view {
   padding: 24px 20px;
   display: flex;

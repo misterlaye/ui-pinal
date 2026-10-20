@@ -1,5 +1,5 @@
 <script setup>
-import { PhCoin, PhBowlFood, PhWarehouse, PhCheckCircle, PhTrendUp } from '@phosphor-icons/vue';
+import { PhCoin, PhBowlFood, PhWarehouse, PhCheckCircle } from '@phosphor-icons/vue';
 import { formatCurrency, formatNumber } from '../../../utils/formatters.js';
 
 const props = defineProps({
@@ -22,9 +22,11 @@ const props = defineProps({
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ formatNumber(kpis.dailyCost) }} <span class="value-currency">FCFA</span></div>
+        <div class="kpi-value" v-if="kpis.coutJournalierComplet">{{ formatNumber(kpis.coutJournalier) }} <span class="value-currency">FCFA</span></div>
+        <div class="kpi-value" v-else>Incomplet</div>
         <div class="kpi-trend text-muted">
-          <span>Troupeau actif en production</span>
+          <span v-if="kpis.coutJournalierComplet">Rations effectives aujourd'hui</span>
+          <span v-else>{{ formatNumber(kpis.coutJournalierConnu) }} FCFA valorisés — prix manquant(s)</span>
         </div>
       </div>
     </div>
@@ -38,9 +40,9 @@ const props = defineProps({
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ formatNumber(kpis.averageRation) }} <span class="value-unit">kg/j</span></div>
+        <div class="kpi-value">{{ kpis.rationMoyenneKg != null ? formatNumber(kpis.rationMoyenneKg) : '—' }} <span v-if="kpis.rationMoyenneKg != null" class="value-unit">kg/j</span></div>
         <div class="kpi-trend text-muted">
-          <span class="trend-label">{{ kpis.averageRationLabel || 'kg / vache alimentée' }}</span>
+          <span class="trend-label">Par vache sous ration (aliments en kg)</span>
         </div>
       </div>
     </div>
@@ -54,9 +56,9 @@ const props = defineProps({
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ formatNumber(kpis.stockRemaining) }} <span class="value-unit">références</span></div>
+        <div class="kpi-value">{{ kpis.alimentsAuCatalogue }} <span class="value-unit">références</span></div>
         <div class="kpi-trend text-muted">
-          <span class="trend-label">{{ kpis.stockRemainingLabel || 'Fourrages, concentrés & minéraux' }}</span>
+          <span class="trend-label">Catalogue de l'exploitation</span>
         </div>
       </div>
     </div>
@@ -70,9 +72,9 @@ const props = defineProps({
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ formatNumber(kpis.efficiency) }}<span class="value-unit">%</span></div>
-        <div class="kpi-trend text-green">
-          <span class="trend-label">{{ kpis.efficiencyLabel || 'Couverture des rations' }}</span>
+        <div class="kpi-value">{{ kpis.couverture != null ? formatNumber(kpis.couverture) : '—' }}<span v-if="kpis.couverture != null" class="value-unit">%</span></div>
+        <div class="kpi-trend text-muted">
+          <span class="trend-label">{{ kpis.couvertureLabel }}</span>
         </div>
       </div>
     </div>

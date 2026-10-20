@@ -63,15 +63,14 @@ const props = defineProps({
     <!-- Score santé global -->
     <div class="kpi-card">
       <div class="kpi-header">
-        <span class="kpi-title">SCORE SANTÉ GLOBAL</span>
+        <span class="kpi-title">ANIMAUX SANS SIGNALEMENT</span>
         <div class="kpi-icon-wrapper bg-green-light text-green">
           <PhHeartbeat :size="16" weight="fill" />
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ kpis.healthScore }}<span class="value-suffix">/100</span></div>
-        <div class="kpi-trend text-green">
-          <PhTrendUp :size="12" weight="bold" />
+        <div class="kpi-value">{{ kpis.healthScore != null ? kpis.healthScore : '—' }}<span v-if="kpis.healthScore != null" class="value-suffix">/100</span></div>
+        <div class="kpi-trend text-muted">
           <span class="trend-label">{{ kpis.healthScoreSubtitle }}</span>
         </div>
       </div>

@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { PhArrowLeft, PhCow } from '@phosphor-icons/vue';
@@ -18,6 +19,7 @@ const route = useRoute();
 const router = useRouter();
 const animal = ref(null);
 const isLoading = ref(true);
+const loadError = ref('');
 const showSortieModal = ref(false);
 const showHealthModal = ref(false);
 const activeLactationId = ref(null);
@@ -28,19 +30,8 @@ const ficheData = ref(null);
 onMounted(async () => {
   const animalId = route.params.id;
   try {
-    const data = await getAnimal(animalId);
-    if (data) {
-      animal.value = data;
-    } else {
-      animal.value = {
-        id: animalId,
-        name: 'Bella',
-        raceId: null,
-        status: 'lactation',
-        identifiant: 'FR-4471-0932',
-        avatar: defaultCow
-      };
-    }
+    // Aucune donnée de substitution : un animal introuvable affiche une erreur, jamais un animal fictif.
+    animal.value = await getAnimal(animalId);
 
     try {
       const races = await getRaces();
@@ -120,7 +111,8 @@ onMounted(async () => {
     };
 
   } catch (error) {
-    console.error("Erreur chargement animal:", error);
+    animal.value = null;
+    loadError.value = apiErrorMessage(error, "Impossible de charger la fiche de l'animal.");
   } finally {
     isLoading.value = false;
   }
@@ -136,8 +128,7 @@ const handleSortieSubmit = async (payload) => {
     showSortieModal.value = false;
     router.push('/dashboard/troupeau'); // Retour au troupeau après la sortie
   } catch (error) {
-    console.error("Erreur déclaration de sortie:", error);
-    alert("Erreur lors de la déclaration de sortie.");
+    alert(apiErrorMessage(error, "Erreur lors de la déclaration de sortie."));
   }
 };
 
@@ -148,8 +139,7 @@ const handleTarir = async () => {
       ficheData.value.isLactating = false;
       alert("Tarissement enregistré avec succès.");
     } catch (error) {
-      console.error("Erreur lors du tarissement:", error);
-      alert("Impossible de déclarer le tarissement.");
+      alert(apiErrorMessage(error, "Impossible de déclarer le tarissement."));
     }
   }
 };
@@ -178,8 +168,7 @@ const handleHealthSubmit = async (payload) => {
       console.warn("Failed to refresh health events", e);
     }
   } catch (error) {
-    console.error("Erreur lors de l'enregistrement de l'événement sanitaire:", error);
-    alert("Erreur lors de l'enregistrement.");
+    alert(apiErrorMessage(error, "Erreur lors de l'enregistrement de l'événement sanitaire."));
   }
 };
 
@@ -335,6 +324,11 @@ const handleHealthSubmit = async (payload) => {
   
   <div v-else-if="isLoading" class="loading-state">
     Chargement de la fiche...
+  </div>
+
+  <div v-else-if="loadError" class="loading-state" role="alert">
+    <p>{{ loadError }}</p>
+    <button type="button" @click="goBack">Retour au troupeau</button>
   </div>
 </template>
 

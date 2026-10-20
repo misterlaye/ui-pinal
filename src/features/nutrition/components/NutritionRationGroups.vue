@@ -31,7 +31,7 @@ const props = defineProps({
             <PhCow :size="18" weight="fill" color="#C87533" />
             <h4 class="group-name">{{ group.name }}</h4>
           </div>
-          <span class="group-badge">{{ group.animalCount || group.cowsCount || 1 }} vache</span>
+          <span class="group-badge">1 animal</span>
         </div>
 
         <div class="group-composition">
@@ -39,8 +39,11 @@ const props = defineProps({
         </div>
 
         <div class="group-footer">
-          <span class="cost-label">Coût journalier estimé</span>
-          <span class="cost-value">{{ formatCurrency(group.costPerHead || group.costPerCow || 0) }}</span>
+          <span class="cost-label">Coût journalier</span>
+          <span class="cost-value" v-if="group.coutParJour != null">{{ formatCurrency(group.coutParJour) }}</span>
+          <span class="cost-value cost-unknown" v-else :title="'Prix manquant : ' + group.alimentsSansPrix.join(', ')">
+            Prix manquant ({{ group.alimentsSansPrix.join(', ') }})
+          </span>
         </div>
 
       </div>
@@ -55,6 +58,11 @@ const props = defineProps({
 </template>
 
 <style scoped>
+.cost-unknown {
+  color: #B45309;
+  font-size: 13px;
+}
+
 .ration-groups-section {
   display: flex;
   flex-direction: column;

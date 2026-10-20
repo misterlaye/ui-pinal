@@ -45,14 +45,10 @@ export async function getExploitationCycles(exploitationId) {
     }));
   
   // 2. Fetch cycles for each female
+  // Un échec de chargement est propagé : une vache ne doit jamais apparaître « sans cycle » par erreur.
   const cyclePromises = females.map(async (animal) => {
-    try {
-      const cycles = await getCycles(animal.id);
-      return cycles.map(c => ({ ...c, animal })); // attach animal info to cycle
-    } catch (e) {
-      console.error(`Failed to fetch cycles for animal ${animal.id}`, e);
-      return [];
-    }
+    const cycles = await getCycles(animal.id);
+    return cycles.map(c => ({ ...c, animal })); // attach animal info to cycle
   });
 
   const nestedCycles = await Promise.all(cyclePromises);

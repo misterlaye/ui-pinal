@@ -8,12 +8,13 @@ import HealthKPIs from '../components/HealthKPIs.vue';
 import HealthAlerts from '../components/HealthAlerts.vue';
 import HealthHistory from '../components/HealthHistory.vue';
 import HealthVaccinationCalendar from '../components/HealthVaccinationCalendar.vue';
-import HealthThermalStress from '../components/HealthThermalStress.vue';
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import ResolveAlertModal from '../components/ResolveAlertModal.vue';
 
 const router = useRouter();
 const healthData = ref(null);
 const isLoading = ref(true);
+const loadError = ref('');
 const isResolveModalOpen = ref(false);
 const alertToResolve = ref(null);
 
@@ -22,7 +23,7 @@ onMounted(async () => {
     const data = await getHealthDashboard();
     healthData.value = data;
   } catch (error) {
-    console.error("Erreur de chargement des données de santé", error);
+    loadError.value = apiErrorMessage(error, 'Impossible de charger le tableau de bord santé.');
   } finally {
     isLoading.value = false;
   }
@@ -70,8 +71,7 @@ const handleResolveSubmit = async (payload) => {
     isLoading.value = true;
     healthData.value = await getHealthDashboard();
   } catch (error) {
-    console.error("Erreur lors de la résolution de l'alerte", error);
-    alert("Impossible de clôturer l'alerte.");
+    alert(apiErrorMessage(error, "Impossible de clôturer l'alerte."));
   } finally {
     isLoading.value = false;
   }
@@ -109,6 +109,8 @@ const handleResolveSubmit = async (payload) => {
       Chargement du suivi sanitaire...
     </div>
 
+    <div v-else-if="loadError" class="loading-state" role="alert">{{ loadError }}</div>
+
     <div v-else-if="healthData" class="dashboard-content">
       
       <!-- Top KPIs -->
@@ -133,11 +135,6 @@ const handleResolveSubmit = async (payload) => {
         <div class="vaccination-container">
           <HealthVaccinationCalendar :vaccinations="healthData.vaccinations" />
         </div>
-      </section>
-
-      <!-- Thermal Stress -->
-      <section class="section">
-        <HealthThermalStress :thermalData="healthData.thermalStress" />
       </section>
 
     </div>

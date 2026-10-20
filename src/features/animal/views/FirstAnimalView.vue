@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useOnboarding } from '../../../composables/useOnboarding.js';
@@ -68,7 +69,7 @@ async function handleSubmit() {
     setStep(6);
     router.push({ name: 'onboarding-success' });
   } catch (err) {
-    apiError.value = err.response?.data?.message || 'Une erreur est survenue. Veuillez réessayer.';
+    apiError.value = apiErrorMessage(err, 'Une erreur est survenue. Veuillez réessayer.');
   } finally {
     loading.value = false;
   }

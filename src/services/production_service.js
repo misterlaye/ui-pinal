@@ -4,20 +4,10 @@ import { apiClient, apiClientLong } from './api_client.js';
  * Service pour le module Production.
  */
 
+// Une erreur est propagée à l'écran appelant : elle ne doit jamais s'afficher comme une production nulle.
 export const getProductionSummary = async () => {
-  try {
-    const { data } = await apiClientLong.get('/production/dashboard');
-    return data;
-  } catch (error) {
-    console.error("Failed to fetch production summary", error);
-    // Return empty mock if failed
-    return {
-      kpis: { totalProduction: 0, averagePerAnimal: 0 },
-      chartData: { labels: [], currentWeek: [], previousWeek: [] },
-      animalProduction: [],
-      history: []
-    };
-  }
+  const { data } = await apiClientLong.get('/production/dashboard');
+  return data;
 };
 
 export const recordBatchMilking = async (payload) => {
@@ -40,13 +30,10 @@ export const tarirLactation = async (animalId) => {
   return data;
 };
 
+// 204 (aucune lactation en cours) -> null ; une véritable erreur est propagée.
 export const getActiveLactation = async (animalId) => {
-  try {
-    const { data } = await apiClient.get(`/lactations/animals/${animalId}/active`);
-    return data;
-  } catch (error) {
-    return null;
-  }
+  const { data } = await apiClient.get(`/lactations/animals/${animalId}/active`);
+  return data || null;
 };
 
 export const getMilkAnalyses = async (lactationId) => {

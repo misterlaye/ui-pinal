@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted } from 'vue';
 import { 
   getExploitationCycles, 
@@ -15,6 +16,7 @@ import DeclareConstatModal from '../components/DeclareConstatModal.vue';
 import DeclareVelageModal from '../components/DeclareVelageModal.vue';
 
 const isLoading = ref(true);
+const loadError = ref('');
 const animals = ref([]);
 const cycles = ref([]);
 
@@ -28,13 +30,14 @@ const selectedCycle = ref(null);
 
 const fetchData = async () => {
   isLoading.value = true;
+  loadError.value = '';
   try {
     const exploitationId = localStorage.getItem('active_exploitation_id');
     const data = await getExploitationCycles(exploitationId);
     animals.value = data.animals;
     cycles.value = data.cycles;
   } catch (e) {
-    console.error("Erreur chargement reproduction", e);
+    loadError.value = apiErrorMessage(e, 'Impossible de charger les cycles de reproduction.');
   } finally {
     isLoading.value = false;
   }
@@ -60,7 +63,7 @@ const confirmAvortement = async (cycle) => {
       alert("Avortement déclaré avec succès.");
       await fetchData();
     } catch(e) {
-      alert("Erreur lors de la déclaration.");
+      alert(apiErrorMessage(e, "Erreur lors de la déclaration de l'avortement."));
     }
   }
 };
@@ -72,7 +75,7 @@ const handleInseminationSubmit = async (payload) => {
     isInsModalOpen.value = false;
     await fetchData();
   } catch (e) {
-    alert("Erreur: " + e.message);
+    alert(apiErrorMessage(e));
   }
 };
 
@@ -82,7 +85,7 @@ const handleConstatSubmit = async (payload) => {
     isConstatModalOpen.value = false;
     await fetchData();
   } catch (e) {
-    alert("Erreur: " + e.message);
+    alert(apiErrorMessage(e));
   }
 };
 
@@ -92,7 +95,7 @@ const handleVelageSubmit = async (payload) => {
     isVelageModalOpen.value = false;
     await fetchData();
   } catch (e) {
-    alert("Erreur: " + e.message);
+    alert(apiErrorMessage(e));
   }
 };
 
@@ -136,6 +139,11 @@ const handleVelageSubmit = async (payload) => {
     <div v-if="isLoading" class="loading-state">
       <div class="spinner"></div>
       Chargement du suivi de reproduction...
+    </div>
+
+    <div v-else-if="loadError" class="loading-state" role="alert">
+      <p>{{ loadError }}</p>
+      <button type="button" @click="fetchData">Réessayer</button>
     </div>
 
     <div v-else class="dashboard-content">

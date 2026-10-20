@@ -1,5 +1,5 @@
 <script setup>
-import { PhDrop, PhChartLineUp, PhTrophy, PhTruck, PhTrendUp, PhTrendDown, PhCheck } from '@phosphor-icons/vue';
+import { PhDrop, PhChartLineUp, PhTrophy, PhTrendUp, PhTrendDown } from '@phosphor-icons/vue';
 
 const props = defineProps({
   kpis: {
@@ -22,10 +22,14 @@ const props = defineProps({
       </div>
       <div class="kpi-body">
         <div class="kpi-value">{{ kpis.totalProduction }} L</div>
-        <div class="kpi-trend text-green">
-          <PhTrendUp :size="12" weight="bold" />
-          <span class="trend-value">+{{ kpis.totalProductionTrend }}%</span>
-          <span class="trend-label">vs semaine dernière</span>
+        <div class="kpi-trend" :class="kpis.totalProductionTrend == null ? 'text-muted' : kpis.totalProductionTrend >= 0 ? 'text-green' : 'text-red'">
+          <template v-if="kpis.totalProductionTrend != null">
+            <PhTrendUp v-if="kpis.totalProductionTrend >= 0" :size="12" weight="bold" />
+            <PhTrendDown v-else :size="12" weight="bold" />
+            <span class="trend-value">{{ kpis.totalProductionTrend > 0 ? '+' : '' }}{{ kpis.totalProductionTrend }}%</span>
+            <span class="trend-label">vs 7 jours précédents</span>
+          </template>
+          <span v-else class="trend-label">Pas de référence sur les 7 jours précédents</span>
         </div>
       </div>
     </div>
@@ -59,23 +63,6 @@ const props = defineProps({
         <div class="best-producer-info">
           <span class="best-producer-name">{{ kpis.bestProducer.name }}</span>
           <span class="trend-label">{{ kpis.bestProducer.subtitle }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Taux de collecte -->
-    <div class="kpi-card">
-      <div class="kpi-header">
-        <span class="kpi-title">TAUX DE COLLECTE</span>
-        <div class="kpi-icon-wrapper bg-green-light text-green">
-          <PhTruck :size="16" weight="fill" />
-        </div>
-      </div>
-      <div class="kpi-body">
-        <div class="kpi-value">{{ kpis.collectionRate }}%</div>
-        <div class="kpi-trend text-green">
-          <PhCheck :size="12" weight="bold" />
-          <span class="trend-label">{{ kpis.collectionRateLabel }}</span>
         </div>
       </div>
     </div>

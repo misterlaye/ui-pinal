@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref } from 'vue';
 import { PhX, PhCheck } from '@phosphor-icons/vue';
 import { apiClient } from '../../../services/api_client';
@@ -56,14 +57,11 @@ const submitCharge = async () => {
       description: ''
     };
     
-    // Small delay to ensure backend transaction completes
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
     emit('charge-created');
     emit('close');
   } catch (err) {
     console.error(err);
-    error.value = err.response?.data?.message || "Une erreur est survenue lors de l'enregistrement de la charge.";
+    error.value = apiErrorMessage(err, "Une erreur est survenue lors de l'enregistrement de la charge.");
   } finally {
     isSubmitting.value = false;
   }

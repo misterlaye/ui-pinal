@@ -82,13 +82,6 @@ export async function updateAnimal(animalId, animalData) {
   return mapAnimal(data);
 }
 
-/**
- * Change le statut d'un animal.
- */
-export async function changeAnimalStatus(animalId, status) {
-  const { data } = await apiClient.patch(`/animals/${animalId}/status?status=${status.toUpperCase()}`);
-  return data;
-}
 
 /**
  * Supprime un animal.

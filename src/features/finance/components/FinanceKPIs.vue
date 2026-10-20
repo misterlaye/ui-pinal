@@ -1,32 +1,34 @@
 <script setup>
-import { PhTrendDown, PhTrendUp, PhTag, PhChartLineUp, PhBank, PhCoins } from '@phosphor-icons/vue';
-import { formatNumber, formatCurrency } from '../../../utils/formatters.js';
+import { PhTrendDown, PhTag, PhChartLineUp, PhBank } from '@phosphor-icons/vue';
+import { formatNumber } from '../../../utils/formatters.js';
 
-const props = defineProps({
-  kpis: {
+// Résultat financier du mois en cours (API /finance/dashboard → moisEnCours).
+// Une valeur null n'est jamais affichée comme 0 : « Non calculable ».
+defineProps({
+  resultat: {
     type: Object,
     required: true
   }
 });
+
+const valeur = (v) => (v == null ? 'Non calculable' : formatNumber(v));
 </script>
 
 <template>
   <div class="kpi-grid">
-    
+
     <!-- Coût de revient -->
     <div class="kpi-card">
       <div class="kpi-header">
-        <span class="kpi-title">COÛT DE REVIENT MOYEN</span>
+        <span class="kpi-title">COÛT DE REVIENT</span>
         <div class="kpi-icon-wrapper bg-red-light text-red">
           <PhTrendDown :size="16" weight="bold" />
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ formatNumber(kpis.coutRevient) }} <span class="value-currency">FCFA / L</span></div>
-        <div class="kpi-trend" :class="kpis.coutRevientTrend < 0 ? 'text-green' : 'text-red'">
-          <PhTrendDown v-if="kpis.coutRevientTrend < 0" :size="12" weight="bold" />
-          <PhTrendUp v-else :size="12" weight="bold" />
-          <span class="trend-label">{{ formatNumber(kpis.coutRevientTrend) }}% vs période préc.</span>
+        <div class="kpi-value">{{ valeur(resultat.coutRevientParLitre) }} <span v-if="resultat.coutRevientParLitre != null" class="value-currency">FCFA / L</span></div>
+        <div class="kpi-trend text-muted">
+          <span class="trend-label">Coût total ÷ litres produits</span>
         </div>
       </div>
     </div>
@@ -34,32 +36,31 @@ const props = defineProps({
     <!-- Prix moyen de vente -->
     <div class="kpi-card">
       <div class="kpi-header">
-        <span class="kpi-title">PRIX MOYEN DE VENTE</span>
+        <span class="kpi-title">PRIX MOYEN DU LAIT</span>
         <div class="kpi-icon-wrapper bg-green-light text-green">
           <PhTag :size="16" weight="fill" />
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ formatNumber(kpis.prixMoyenVente) }} <span class="value-currency">FCFA / L</span></div>
+        <div class="kpi-value">{{ valeur(resultat.prixMoyenParLitre) }} <span v-if="resultat.prixMoyenParLitre != null" class="value-currency">FCFA / L</span></div>
         <div class="kpi-trend text-muted">
-          <span class="trend-label">Stable vs période préc.</span>
+          <span class="trend-label">{{ formatNumber(resultat.volumeLitres) }} L produits</span>
         </div>
       </div>
     </div>
 
-    <!-- Marge brute unitaire -->
+    <!-- Marge -->
     <div class="kpi-card">
       <div class="kpi-header">
-        <span class="kpi-title">MARGE BRUTE UNITAIRE</span>
+        <span class="kpi-title">MARGE DU MOIS</span>
         <div class="kpi-icon-wrapper bg-orange-light text-orange">
           <PhChartLineUp :size="16" weight="fill" />
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ formatNumber(kpis.margeBrute) }} <span class="value-currency">FCFA / L</span></div>
-        <div class="kpi-trend text-green">
-          <PhTrendUp :size="12" weight="bold" />
-          <span class="trend-label">+{{ formatNumber(kpis.margeBruteTrend) }}% vs période préc.</span>
+        <div class="kpi-value">{{ valeur(resultat.marge) }} <span v-if="resultat.marge != null" class="value-currency">FCFA</span></div>
+        <div class="kpi-trend text-muted">
+          <span class="trend-label">CA − alimentation − autres charges</span>
         </div>
       </div>
     </div>
@@ -67,16 +68,15 @@ const props = defineProps({
     <!-- Chiffre d'affaires -->
     <div class="kpi-card highlight-card">
       <div class="kpi-header">
-        <span class="kpi-title highlight-title">CHIFFRE D'AFFAIRES DE LA PÉRIODE</span>
+        <span class="kpi-title highlight-title">CHIFFRE D'AFFAIRES DU MOIS</span>
         <div class="kpi-icon-wrapper bg-white-opacity text-white">
           <PhBank :size="16" weight="fill" />
         </div>
       </div>
       <div class="kpi-body">
-        <div class="kpi-value text-white">{{ formatNumber(kpis.chiffreAffaires) }} <span class="value-currency-white">FCFA</span></div>
+        <div class="kpi-value text-white">{{ valeur(resultat.chiffreAffaires) }} <span v-if="resultat.chiffreAffaires != null" class="value-currency-white">FCFA</span></div>
         <div class="kpi-trend text-white-muted">
-          <PhTrendDown :size="12" weight="bold" />
-          <span class="trend-label">{{ formatNumber(kpis.chiffreAffairesTrend) }}% vs période préc.</span>
+          <span class="trend-label">Lait valorisé au prix applicable chaque jour</span>
         </div>
       </div>
     </div>

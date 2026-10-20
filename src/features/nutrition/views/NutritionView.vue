@@ -6,20 +6,21 @@ import { getNutritionDashboard } from '../../../services/nutrition_service.js';
 import NutritionKPIs from '../components/NutritionKPIs.vue';
 import NutritionRationGroups from '../components/NutritionRationGroups.vue';
 import NutritionStockTable from '../components/NutritionStockTable.vue';
-import NutritionDeliveries from '../components/NutritionDeliveries.vue';
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import NutritionCatalogue from '../components/NutritionCatalogue.vue';
 
 const currentTab = ref('dashboard');
 const nutritionData = ref(null);
 const isLoading = ref(true);
+const loadError = ref('');
 
 const loadDashboardData = async () => {
   try {
     isLoading.value = true;
-    const data = await getNutritionDashboard();
-    nutritionData.value = data;
+    loadError.value = '';
+    nutritionData.value = await getNutritionDashboard();
   } catch (error) {
-    console.error("Erreur de chargement des données de nutrition", error);
+    loadError.value = apiErrorMessage(error, 'Impossible de charger le tableau de bord nutrition.');
   } finally {
     isLoading.value = false;
   }
@@ -69,7 +70,20 @@ onMounted(() => {
       Chargement du module nutrition...
     </div>
 
+    <div v-else-if="currentTab === 'dashboard' && loadError" class="load-error" role="alert">
+      <p>{{ loadError }}</p>
+      <button class="btn-primary" @click="loadDashboardData">Réessayer</button>
+    </div>
     <div v-else-if="currentTab === 'dashboard' && nutritionData" class="dashboard-content">
+      <!-- Prix manquants : le coût de ces lignes n'est pas compté comme nul -->
+      <section v-if="nutritionData.alimentsSansPrix.length" class="section missing-prices" role="status">
+        <p>
+          Aucun prix en vigueur aujourd'hui pour :
+          <strong>{{ nutritionData.alimentsSansPrix.map(a => a.name).join(', ') }}</strong>.
+          Le coût de ces lignes n'est pas compté ; renseignez le prix dans le catalogue.
+        </p>
+        <button class="btn-secondary" @click="switchTab('catalogue')">Ouvrir le catalogue</button>
+      </section>
       
       <!-- Top KPIs -->
       <section class="section">
@@ -83,7 +97,7 @@ onMounted(() => {
 
       <!-- Stock & Daily Consumption Table -->
       <section class="section">
-        <NutritionStockTable :stocks="nutritionData.stocks" />
+        <NutritionStockTable :consommations="nutritionData.consommations" />
       </section>
 
     </div>
@@ -96,6 +110,19 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.missing-prices,
+.load-error {
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #F59E0B;
+  background: #FFFBEB;
+  color: #78350F;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
 .nutrition-view {
   display: flex;
   flex-direction: column;

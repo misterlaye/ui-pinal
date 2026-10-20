@@ -25,59 +25,56 @@ ChartJS.register(
 );
 
 const props = defineProps({
-  revenueData: {
+  // { labels, chiffreAffaires, coutTotal } — une valeur null signifie « non calculable » (jamais 0)
+  historique: {
     type: Object,
     required: true
   },
-  repartitionData: {
+  // { labels, montants (FCFA), coutAlimentationPartiel }
+  repartition: {
     type: Object,
     required: true
   }
 });
 
-// Check if data is empty
+const PALETTE = ['#C87533', '#374151', '#10B981', '#6366F1', '#F59E0B', '#EF4444', '#0EA5E9', '#A855F7'];
+
 const isRevenueEmpty = computed(() => {
-  if (!props.revenueData || !props.revenueData.revenues || !props.revenueData.charges) {
-    return true;
-  }
-  return props.revenueData.revenues.every(v => v === 0) && 
-         props.revenueData.charges.every(v => v === 0);
+  const h = props.historique;
+  if (!h || !h.labels?.length) return true;
+  return [...(h.chiffreAffaires || []), ...(h.coutTotal || [])].every(v => v == null || Number(v) === 0);
+});
+
+// Mois dont au moins une valeur n'est pas calculable (prix manquant…) : signalés sous le graphique.
+const moisIncomplets = computed(() => {
+  const h = props.historique || {};
+  return (h.labels || []).filter((_, i) => h.chiffreAffaires?.[i] == null || h.coutTotal?.[i] == null);
 });
 
 const isRepartitionEmpty = computed(() => {
-  if (!props.repartitionData || !props.repartitionData.data) {
-    return true;
-  }
-  return props.repartitionData.data.length === 0 || 
-         props.repartitionData.data.every(v => v === 0);
+  const montants = props.repartition?.montants || [];
+  return montants.length === 0 || montants.every(v => Number(v) === 0);
 });
 
-// Calculate total charges for donut center
-const totalCharges = computed(() => {
-  if (!props.repartitionData || !props.repartitionData.data) return 0;
-  return props.repartitionData.data.reduce((sum, val) => sum + val, 0);
-});
+const totalCharges = computed(() => (props.repartition?.montants || []).reduce((sum, val) => sum + Number(val), 0));
 
-const formattedTotal = computed(() => {
-  return formatCurrencyCompact(totalCharges.value);
-});
+const formattedTotal = computed(() => formatCurrencyCompact(totalCharges.value));
 
-// Bar Chart Configuration
 const barChartData = computed(() => ({
-  labels: props.revenueData.labels,
+  labels: props.historique.labels,
   datasets: [
     {
-      label: 'Revenus',
-      backgroundColor: '#10B981', // Green
-      data: props.revenueData.revenues,
+      label: "Chiffre d'affaires",
+      backgroundColor: '#10B981',
+      data: props.historique.chiffreAffaires,
       borderRadius: 4,
       barPercentage: 0.8,
       categoryPercentage: 0.8
     },
     {
-      label: 'Charges',
-      backgroundColor: '#C87533', // Ocre/Brick Red
-      data: props.revenueData.charges,
+      label: 'Coût total',
+      backgroundColor: '#C87533',
+      data: props.historique.coutTotal,
       borderRadius: 4,
       barPercentage: 0.8,
       categoryPercentage: 0.8
@@ -150,11 +147,11 @@ const barChartOptions = {
 
 // Pie Chart Configuration
 const pieChartData = computed(() => ({
-  labels: props.repartitionData.labels,
+  labels: props.repartition.labels,
   datasets: [
     {
-      backgroundColor: props.repartitionData.colors,
-      data: props.repartitionData.data,
+      backgroundColor: props.repartition.labels.map((_, i) => PALETTE[i % PALETTE.length]),
+      data: props.repartition.montants,
       borderWidth: 0,
       hoverOffset: 4
     }
@@ -206,7 +203,7 @@ const pieChartOptions = computed(() => ({
       <div class="card-header">
         <div class="title-group">
           <PhChartBar :size="20" weight="bold" color="#C87533" />
-          <h3 class="card-title">Revenus vs Charges (6 derniers mois)</h3>
+          <h3 class="card-title">Chiffre d'affaires et coût total (3 derniers mois et mois en cours)</h3>
         </div>
       </div>
       <div class="chart-container bar-container">
@@ -218,6 +215,9 @@ const pieChartOptions = computed(() => ({
         <!-- Chart -->
         <Bar v-else :data="barChartData" :options="barChartOptions" />
       </div>
+      <p v-if="moisIncomplets.length" class="chart-note">
+        Valeurs non calculables (données manquantes) : {{ moisIncomplets.join(', ') }}.
+      </p>
     </div>
 
     <!-- Pie Chart Card -->
@@ -232,7 +232,7 @@ const pieChartOptions = computed(() => ({
         <!-- Empty State -->
         <div v-if="isRepartitionEmpty" class="chart-empty-state">
           <PhChartLine :size="48" color="#D1D5DB" weight="light" />
-          <p class="empty-message">Aucune répartition disponible</p>
+          <p class="empty-message">Aucune charge sur le mois en cours</p>
         </div>
         <!-- Chart -->
         <template v-else>
@@ -244,6 +244,9 @@ const pieChartOptions = computed(() => ({
           </div>
         </template>
       </div>
+      <p v-if="repartition.coutAlimentationPartiel" class="chart-note">
+        Coût alimentaire partiel : certains aliments n'ont pas de prix sur la période.
+      </p>
     </div>
 
   </div>
@@ -309,6 +312,12 @@ const pieChartOptions = computed(() => ({
   justify-content: center;
   gap: 12px;
   height: 100%;
+}
+
+.chart-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .empty-message {

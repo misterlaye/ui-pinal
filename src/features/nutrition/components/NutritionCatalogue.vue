@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted, computed } from 'vue';
 import { PhPlus, PhMagnifyingGlass, PhDotsThree, PhCurrencyCircleDollar } from '@phosphor-icons/vue';
 import { getAliments, createAliment, getAlimentPrices, createAlimentPrice } from '../../../services/nutrition_service.js';
@@ -33,8 +34,10 @@ const fetchAliments = async () => {
       data.map(async (aliment) => {
         try {
           const prices = await getAlimentPrices(aliment.id);
-          const current = prices && prices.length ? prices[0].prixUnitaire : null;
-          return { ...aliment, currentPrice: current };
+          // Prix en vigueur aujourd'hui (période de validité), pas simplement le plus récent saisi.
+          const today = new Date().toISOString().split('T')[0];
+          const current = (prices || []).find(p => p.dateDebut <= today && (!p.dateFin || p.dateFin >= today));
+          return { ...aliment, currentPrice: current ? current.prixUnitaire : null };
         } catch (e) {
           return { ...aliment, currentPrice: null };
         }
@@ -42,7 +45,7 @@ const fetchAliments = async () => {
     );
     aliments.value = withPrices;
   } catch (error) {
-    console.error("Erreur de chargement des aliments", error);
+    alert(apiErrorMessage(error, "Impossible de charger le catalogue d'aliments."));
   } finally {
     isLoading.value = false;
   }
@@ -68,7 +71,7 @@ const submitAliment = async () => {
     await fetchAliments();
   } catch (error) {
     console.error("Erreur lors de la création de l'aliment", error);
-    alert("Erreur lors de la création de l'aliment.");
+    alert(apiErrorMessage(error, "Erreur lors de la création de l'aliment."));
   }
 };
 
@@ -92,7 +95,7 @@ const submitPrice = async () => {
     await fetchAliments();
   } catch (error) {
     console.error("Erreur lors de la définition du prix", error);
-    alert("Erreur lors de la définition du prix : " + (error.response?.data?.message || error.message));
+    alert(apiErrorMessage(error, "Erreur lors de la définition du prix."));
   }
 };
 </script>

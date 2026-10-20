@@ -1,8 +1,9 @@
 <script setup>
 import { PhArchiveBox, PhLeaf } from '@phosphor-icons/vue';
 
-const props = defineProps({
-  stocks: {
+// Consommation journalière prévue par les rations effectives — aucun stock n'est géré par l'application.
+defineProps({
+  consommations: {
     type: Array,
     required: true
   }
@@ -14,23 +15,22 @@ const props = defineProps({
     <div class="card-header">
       <div class="title-group">
         <PhArchiveBox :size="20" weight="fill" color="#C87533" />
-        <h3 class="card-title">Consommation Journalière des Aliments</h3>
+        <h3 class="card-title">Consommation journalière prévue par les rations</h3>
       </div>
     </div>
-    
-    <div class="table-container" v-if="stocks && stocks.length">
+
+    <div class="table-container" v-if="consommations && consommations.length">
       <table class="pn-table">
         <thead>
           <tr>
             <th>Aliment</th>
-            <th>Consommation Journalière Troupeau</th>
-            <th>Prix Unitaire en Vigueur</th>
+            <th>Consommation prévue / jour</th>
+            <th>Prix unitaire en vigueur</th>
             <th>Statut</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in stocks" :key="item.id">
-            <!-- Aliment -->
+          <tr v-for="item in consommations" :key="item.id">
             <td>
               <div class="aliment-info">
                 <div class="aliment-icon">
@@ -39,23 +39,20 @@ const props = defineProps({
                 <span class="aliment-name">{{ item.name }}</span>
               </div>
             </td>
-            
-            <!-- Consommation -->
+
             <td class="font-bold">
-              {{ item.consumptionRate || item.dailyCons || 0 }}
-              <span class="unit">{{ item.unit || 'kg' }}/jour</span>
+              {{ item.consommationJournaliere }}
+              <span class="unit">{{ item.unit }}/jour</span>
             </td>
-            
-            <!-- Prix Unitaire / Statut -->
+
             <td class="price-cell">
-              {{ item.status }}
+              <template v-if="item.prixUnitaire != null">{{ item.prixUnitaire }} FCFA/{{ item.unit }}</template>
+              <span v-else class="price-missing">Prix à définir</span>
             </td>
-            
-            <!-- Status Badge -->
+
             <td>
-              <span class="status-badge" 
-                    :class="(item.consumptionRate > 0) ? 'badge-ok' : 'badge-idle'">
-                {{ (item.consumptionRate > 0) ? 'En distribution' : 'Non distribué' }}
+              <span class="status-badge" :class="Number(item.consommationJournaliere) > 0 ? 'badge-ok' : 'badge-idle'">
+                {{ Number(item.consommationJournaliere) > 0 ? 'Dans une ration' : 'Non utilisé' }}
               </span>
             </td>
           </tr>
@@ -70,6 +67,11 @@ const props = defineProps({
 </template>
 
 <style scoped>
+.price-missing {
+  color: #B45309;
+  font-weight: 600;
+}
+
 .stock-card {
   background: var(--bg-white);
   border: 1px solid var(--border-light);

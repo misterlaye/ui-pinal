@@ -161,13 +161,12 @@ const handleSave = async () => {
         </div>
         <div class="form-group flex-1">
           <label class="pn-label">Statut actuel</label>
-          <div class="select-wrapper">
-            <select v-model="form.status" class="pn-select">
-              <option value="ACTIF">Actif</option>
-              <option value="VENDU">Vendu</option>
-              <option value="DECEDE">Décédé</option>
-            </select>
-          </div>
+          <p class="status-readonly">
+            {{ form.status === 'VENDU' ? 'Vendu' : form.status === 'DECEDE' ? 'Décédé' : 'Actif' }}
+          </p>
+          <p class="status-hint">
+            Vente ou décès : utilisez « Déclarer une sortie » sur la fiche de l'animal (date et motif enregistrés).
+          </p>
         </div>
       </div>
 
@@ -276,5 +275,16 @@ const handleSave = async () => {
 .pn-select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(200, 117, 51, 0.15);
+}
+
+.status-readonly {
+  font-weight: 600;
+  margin: 6px 0 2px;
+}
+
+.status-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
 }
 </style>

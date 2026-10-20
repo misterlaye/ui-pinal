@@ -49,7 +49,7 @@ const chartOptions = {
       beginAtZero: true,
       title: {
         display: true,
-        text: 'Production (kg)'
+        text: 'Production (L)'
       }
     },
     x: {
@@ -77,7 +77,7 @@ onMounted(async () => {
           label: 'Production (L)',
           backgroundColor: '#C87533',
           borderColor: '#C87533',
-          data: data.map(d => d.quantiteKg),
+          data: data.map(d => d.quantiteLitres),
           tension: 0.3
         }]
       };

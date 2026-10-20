@@ -1,11 +1,12 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted } from 'vue';
 import AnimalCard from '../components/AnimalCard.vue';
 import DonutChart from '../components/DonutChart.vue';
 import AnimalFormDrawer from '../components/AnimalFormDrawer.vue';
 import PnModal from '../../../components/ui/PnModal.vue';
 import PnButton from '../../../components/ui/PnButton.vue';
-import { getAnimalsList, createAnimal, updateAnimal, changeAnimalStatus, deleteAnimal } from '../../../services/animal_service.js';
+import { getAnimalsList, createAnimal, updateAnimal, deleteAnimal } from '../../../services/animal_service.js';
 import {
   PhPlus,
   PhMagnifyingGlass,
@@ -17,8 +18,8 @@ import {
 import { useExploitation } from '../../../composables/useExploitation.js';
 import { getActiveRaces } from '../../../services/race_service.js';
 
-// Simulate loading state for UX
 const isLoading = ref(true);
+const loadError = ref('');
 const animals = ref([]);
 const { getActiveExploitation } = useExploitation();
 
@@ -38,7 +39,7 @@ onMounted(async () => {
       });
     }
   } catch (err) {
-    console.error("Failed to load animals", err);
+    loadError.value = apiErrorMessage(err, 'Impossible de charger le troupeau.');
   } finally {
     isLoading.value = false;
   }
@@ -66,12 +67,8 @@ const handleSaveAnimal = async (animalData) => {
   try {
     let savedAnimal;
     if (selectedAnimal.value) {
+      // Le statut ne se modifie pas ici : une sortie passe par « Déclarer une sortie » (fiche animal).
       savedAnimal = await updateAnimal(selectedAnimal.value.id, animalData);
-      if (animalData.status && animalData.status !== selectedAnimal.value.status) {
-        await changeAnimalStatus(selectedAnimal.value.id, animalData.status);
-        savedAnimal.status = animalData.status;
-        savedAnimal.statut = animalData.status;
-      }
     } else {
       savedAnimal = await createAnimal(animalData);
     }
@@ -89,7 +86,8 @@ const handleSaveAnimal = async (animalData) => {
     }
     isDrawerOpen.value = false;
   } catch (err) {
-    console.error("Failed to save animal", err);
+    // Le formulaire reste ouvert : la saisie n'est pas perdue.
+    alert(apiErrorMessage(err, "Erreur lors de l'enregistrement de l'animal."));
   }
 };
 
@@ -107,7 +105,7 @@ const handleDelete = async () => {
     isDeleteModalOpen.value = false;
     animalToDelete.value = null;
   } catch (err) {
-    console.error("Failed to delete animal", err);
+    alert(apiErrorMessage(err, "Impossible de supprimer cet animal."));
   } finally {
     isDeleting.value = false;
   }
@@ -246,8 +244,10 @@ const filteredAnimals = computed(() => {
       </div>
     </div>
 
+    <div v-if="loadError" class="load-error" role="alert">{{ loadError }}</div>
+
     <!-- Grid -->
-    <div class="grid-container" v-if="!isLoading">
+    <div class="grid-container" v-if="!isLoading && !loadError">
       <AnimalCard
         v-for="animal in filteredAnimals"
         :key="animal.id"
@@ -342,6 +342,14 @@ const filteredAnimals = computed(() => {
 </template>
 
 <style scoped>
+.load-error {
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #DC2626;
+  background: #FEF2F2;
+  color: #7F1D1D;
+}
+
 .troupeau-view {
   display: flex;
   flex-direction: column;

@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted, computed } from 'vue';
 import { PhBowlFood, PhPlus, PhCheckCircle, PhXCircle, PhPlay, PhTrash } from '@phosphor-icons/vue';
 import { 
@@ -24,6 +25,8 @@ const isLoading = ref(true);
 const isCreating = ref(false);
 const isAddingLine = ref(false);
 const estimatedCost = ref(null);
+// Coût non calculable (prix d'aliment manquant…) : la cause est affichée, jamais un coût nul.
+const costError = ref('');
 
 const newRation = ref({
   dateDebut: new Date().toISOString().split('T')[0],
@@ -69,14 +72,16 @@ const fetchData = async () => {
       try {
         const costData = await getRationCost(props.animalId, active.id, new Date().toISOString().split('T')[0]);
         estimatedCost.value = costData.coutTotal;
+        costError.value = '';
       } catch (e) {
         estimatedCost.value = null;
+        costError.value = apiErrorMessage(e, 'Coût indisponible.');
       }
     } else {
       estimatedCost.value = null;
     }
   } catch (error) {
-    console.error("Erreur chargement rations:", error);
+    costError.value = apiErrorMessage(error, 'Impossible de charger les rations.');
   } finally {
     isLoading.value = false;
   }
@@ -97,7 +102,7 @@ const handleCreateRation = async () => {
     isCreating.value = false;
     await fetchData();
   } catch (error) {
-    alert("Erreur lors de la création de la ration.");
+    alert(apiErrorMessage(error, "Erreur lors de la création de la ration."));
   }
 };
 
@@ -110,7 +115,7 @@ const handleAddLine = async () => {
     isAddingLine.value = false;
     await fetchData();
   } catch (error) {
-    alert("Erreur lors de l'ajout de l'aliment.");
+    alert(apiErrorMessage(error, "Erreur lors de l'ajout de l'aliment."));
   }
 };
 
@@ -119,7 +124,7 @@ const handleActivate = async () => {
     await activateRation(props.animalId, activeRation.value.id);
     await fetchData();
   } catch (error) {
-    alert("Erreur lors de l'activation de la ration.");
+    alert(apiErrorMessage(error, "Erreur lors de l'activation de la ration."));
   }
 };
 
@@ -131,7 +136,7 @@ const handleTerminate = async () => {
     await terminateRation(props.animalId, activeRation.value.id, { dateFin });
     await fetchData();
   } catch (error) {
-    alert("Erreur lors de la terminaison de la ration.");
+    alert(apiErrorMessage(error, "Erreur lors de la terminaison de la ration."));
   }
 };
 </script>
@@ -177,6 +182,9 @@ const handleTerminate = async () => {
           <div class="ration-info">
             <span class="status-badge" :class="activeRation.statut.toLowerCase()">{{ activeRation.statut }}</span>
             <span class="ration-date">Depuis le {{ activeRation.dateDebut }}</span>
+          </div>
+          <div class="ration-cost ration-cost--unknown" v-if="estimatedCost === null && costError">
+            Coût non calculable : {{ costError }}
           </div>
           <div class="ration-cost" v-if="estimatedCost !== null">
             Coût estimé: <strong>{{ estimatedCost }} FCFA/j</strong>

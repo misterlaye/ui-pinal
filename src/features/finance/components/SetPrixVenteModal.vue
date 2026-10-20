@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref } from 'vue';
 import { PhX, PhCheck } from '@phosphor-icons/vue';
 import { createPrixVente } from '../../../services/finance_service.js';
@@ -44,7 +45,7 @@ const submitPrice = async () => {
     emit('close');
   } catch (err) {
     console.error(err);
-    error.value = err.response?.data?.message || "Erreur lors de l'enregistrement du prix.";
+    error.value = apiErrorMessage(err, "Erreur lors de l'enregistrement du prix.");
   } finally {
     isSubmitting.value = false;
   }

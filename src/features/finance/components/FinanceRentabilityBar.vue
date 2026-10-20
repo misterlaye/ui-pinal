@@ -1,42 +1,39 @@
 <script setup>
-import { PhStar, PhTrendUp, PhTrendDown } from '@phosphor-icons/vue';
+import { computed } from 'vue';
+import { PhStar } from '@phosphor-icons/vue';
 import { formatCurrency, formatNumber } from '../../../utils/formatters.js';
 
+// Résultat financier du mois en cours. La marge peut être non calculable (donnée manquante).
 const props = defineProps({
-  rentability: {
+  resultat: {
     type: Object,
     required: true
   }
 });
+
+const calculable = computed(() => props.resultat.marge != null);
+const positive = computed(() => calculable.value && Number(props.resultat.marge) >= 0);
 </script>
 
 <template>
-  <div class="rentability-bar" :class="rentability.netProfit >= 0 ? 'bg-green-light' : 'bg-red-light'">
-    
+  <div class="rentability-bar" :class="!calculable ? 'bg-neutral' : positive ? 'bg-green-light' : 'bg-red-light'">
+
     <div class="bar-left">
-      <div class="icon-wrapper" :class="rentability.netProfit >= 0 ? 'bg-green text-white' : 'bg-red text-white'">
+      <div class="icon-wrapper" :class="!calculable ? 'bg-neutral-dark text-white' : positive ? 'bg-green text-white' : 'bg-red text-white'">
         <PhStar :size="20" weight="fill" />
       </div>
       <div class="rentability-info">
-        <span class="rentability-label">RENTABILITÉ — BÉNÉFICE NET DE LA PÉRIODE</span>
-        <span class="rentability-value" :class="rentability.netProfit >= 0 ? 'text-green-dark' : 'text-red-dark'">
-          {{ formatCurrency(rentability.netProfit) }}
+        <span class="rentability-label">RENTABILITÉ — MARGE DU MOIS EN COURS</span>
+        <span class="rentability-value" :class="!calculable ? '' : positive ? 'text-green-dark' : 'text-red-dark'">
+          {{ calculable ? formatCurrency(resultat.marge) : 'Non calculable' }}
         </span>
       </div>
     </div>
 
     <div class="bar-right">
       <div class="margin-info">
-        <span class="margin-label">Marge nette</span>
-        <span class="margin-value">{{ formatNumber(rentability.netMarginPercentage) }}%</span>
-      </div>
-      <div class="trend-info" :class="rentability.trend >= 0 ? 'text-green-dark' : 'text-red-dark'">
-        <span class="trend-label">Évolution vs période préc.</span>
-        <span class="trend-value">
-          <PhTrendUp v-if="rentability.trend >= 0" :size="14" weight="bold" />
-          <PhTrendDown v-else :size="14" weight="bold" />
-          {{ rentability.trend > 0 ? '+' : '' }}{{ formatNumber(rentability.trend) }}%
-        </span>
+        <span class="margin-label">Taux de marge</span>
+        <span class="margin-value">{{ resultat.tauxMarge != null ? formatNumber(resultat.tauxMarge) + '%' : '—' }}</span>
       </div>
     </div>
 
@@ -44,6 +41,14 @@ const props = defineProps({
 </template>
 
 <style scoped>
+.bg-neutral {
+  background: #F3F4F6;
+}
+
+.bg-neutral-dark {
+  background: #6B7280;
+}
+
 .rentability-bar {
   display: flex;
   justify-content: space-between;

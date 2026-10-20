@@ -31,8 +31,7 @@ const formatNumber = (num) => {
             <th class="text-right">Matin (L)</th>
             <th class="text-right">Soir (L)</th>
             <th class="text-right">Total Jour (L)</th>
-            <th>Tendance 7J</th>
-            <th>Statut</th>
+            <th>Évolution vs hier</th>
           </tr>
         </thead>
         <tbody>
@@ -55,18 +54,11 @@ const formatNumber = (num) => {
             
             <!-- Trend -->
             <td>
-              <div class="trend-cell" :class="animal.trend >= 0 ? 'text-green' : 'text-red'">
+              <div v-if="animal.trend != null" class="trend-cell" :class="animal.trend >= 0 ? 'text-green' : 'text-red'" title="Par rapport à hier">
                 <PhTrendUp v-if="animal.trend >= 0" :size="14" weight="bold" />
                 <PhTrendDown v-else :size="14" weight="bold" />
                 <span>{{ animal.trend > 0 ? '+' : '' }}{{ formatNumber(animal.trend) }}%</span>
               </div>
-            </td>
-            
-            <!-- Status Badge -->
-            <td>
-              <span class="status-badge" :class="animal.status === 'NORMAL' ? 'badge-normal' : 'badge-alert'">
-                {{ animal.status }}
-              </span>
             </td>
           </tr>
         </tbody>

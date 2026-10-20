@@ -57,7 +57,7 @@ const handleView = (animalId) => {
         <div class="alert-content-col">
           <div class="alert-header">
             <span class="animal-name">{{ alert.animalName }} - {{ alert.animalIdentifier }}</span>
-            <span class="risk-badge" :class="alert.severity === 'RISQUE ÉLEVÉ' ? 'risk-high' : 'risk-medium'">
+            <span class="risk-badge risk-medium">
               {{ alert.severity }}
             </span>
           </div>

@@ -18,12 +18,23 @@ const selectedAnimal = ref(null);
 const searchQuery = ref('');
 const quantity = ref(10.0);
 const presets = [8, 10, 12, 14];
+// Type de traite choisi par l'ouvrier ; proposé selon l'heure (avant midi : matin).
+const milkingType = ref(defaultMilkingType());
+
+function defaultMilkingType() {
+  return new Date().getHours() < 12 ? 'MATIN' : 'SOIR';
+}
 
 const animals = ref([]);
 const { getActiveExploitation } = useExploitation();
 
 watch(() => props.isOpen, async (newVal) => {
+  if (!newVal) {
+    resetState();
+    return;
+  }
   if (newVal) {
+    milkingType.value = defaultMilkingType();
     const exploitationId = getActiveExploitation();
     if (exploitationId) {
       animals.value = await getWorkerAnimals(exploitationId);
@@ -56,20 +67,26 @@ function setQuantity(val) {
   quantity.value = parseFloat(val.toFixed(1));
 }
 
-function close() {
+function resetState() {
   step.value = 1;
   selectedAnimal.value = null;
   searchQuery.value = '';
+}
+
+function close() {
+  resetState();
   emit('close');
 }
 
+// La fenêtre reste ouverte jusqu'à la confirmation de l'enregistrement par le parent :
+// en cas d'erreur, la saisie n'est pas perdue.
 function submit() {
   emit('submit', {
     animal: selectedAnimal.value,
     quantity: quantity.value,
+    type: milkingType.value,
     time: new Date()
   });
-  close();
 }
 </script>
 
@@ -138,6 +155,12 @@ function submit() {
           <button class="change-btn" @click="step = 1">CHANGER</button>
         </div>
 
+        <!-- Type de traite -->
+        <div class="type-toggle" role="group" aria-label="Type de traite">
+          <button type="button" class="type-btn" :class="{ active: milkingType === 'MATIN' }" @click="milkingType = 'MATIN'">MATIN</button>
+          <button type="button" class="type-btn" :class="{ active: milkingType === 'SOIR' }" @click="milkingType = 'SOIR'">SOIR</button>
+        </div>
+
         <!-- Quantity Input -->
         <div class="quantity-section">
           <span class="meta-label text-center">VOLUME DE LA TRAITE</span>
@@ -171,7 +194,7 @@ function submit() {
         <!-- Submit -->
         <button class="submit-btn" @click="submit">
           <PhDrop :size="20" weight="fill" />
-          ENREGISTRER {{ quantity.toFixed(1).replace('.', ',') }} L
+          ENREGISTRER {{ quantity.toFixed(1).replace('.', ',') }} L — {{ milkingType }}
         </button>
 
         <p class="auto-time">
@@ -185,6 +208,26 @@ function submit() {
 </template>
 
 <style scoped>
+.type-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 10px;
+  border: 2px solid #1A1A1A;
+  background: #FFFFFF;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.type-btn.active {
+  background: #1A1A1A;
+  color: #FFFFFF;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

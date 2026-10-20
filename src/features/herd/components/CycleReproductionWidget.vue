@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted, computed } from 'vue';
 import { PhBaby, PhSyringe, PhCalendarCheck, PhHeartbeat } from '@phosphor-icons/vue';
 import PnButton from '../../../components/ui/PnButton.vue';
@@ -53,7 +54,7 @@ const loadCycles = async () => {
   try {
     cycles.value = await getCycles(props.animalId);
   } catch (error) {
-    console.error('Failed to load cycles', error);
+    alert(apiErrorMessage(error, 'Impossible de charger les cycles de reproduction.'));
   } finally {
     isLoading.value = false;
   }
@@ -79,7 +80,7 @@ const handleInsemination = async () => {
     await loadCycles();
     emit('cycleUpdated');
   } catch (e) {
-    console.error(e);
+    alert(apiErrorMessage(e));
   }
 };
 
@@ -91,7 +92,7 @@ const handleConstat = async () => {
     await loadCycles();
     emit('cycleUpdated');
   } catch (e) {
-    console.error(e);
+    alert(apiErrorMessage(e));
   }
 };
 
@@ -103,7 +104,7 @@ const handleVelage = async () => {
     await loadCycles();
     emit('cycleUpdated');
   } catch (e) {
-    console.error(e);
+    alert(apiErrorMessage(e));
   }
 };
 
@@ -115,7 +116,7 @@ const handleAvortement = async () => {
       await loadCycles();
       emit('cycleUpdated');
     } catch (e) {
-      console.error(e);
+      alert(apiErrorMessage(e));
     }
   }
 };

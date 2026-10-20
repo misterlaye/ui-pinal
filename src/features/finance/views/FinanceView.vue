@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { PhDownloadSimple, PhPlus } from '@phosphor-icons/vue';
 import { getFinanceDashboard } from '../../../services/finance_service.js';
 
@@ -13,7 +14,7 @@ import SetPrixVenteModal from '../components/SetPrixVenteModal.vue';
 const financeData = ref(null);
 const isLoading = ref(true);
 const isRefreshing = ref(false);
-const missingPriceError = ref(false);
+const loadError = ref('');
 const showChargeModal = ref(false);
 const showPriceModal = ref(false);
 
@@ -23,16 +24,11 @@ const loadData = async (isRefresh = false) => {
   } else {
     isLoading.value = true;
   }
-  missingPriceError.value = false;
+  loadError.value = '';
   try {
-    const data = await getFinanceDashboard();
-    financeData.value = data;
+    financeData.value = await getFinanceDashboard();
   } catch (error) {
-    if (error.response && error.response.status === 422) {
-      missingPriceError.value = true;
-    } else {
-      console.error("Erreur de chargement des données financières", error);
-    }
+    loadError.value = apiErrorMessage(error, 'Impossible de charger les données financières.');
   } finally {
     isLoading.value = false;
     isRefreshing.value = false;
@@ -58,6 +54,10 @@ const exportReport = () => {
   link.click();
   document.body.removeChild(link);
 };
+
+// Avertissements du calcul (prix manquants, aucune traite) : affichés tels quels, jamais masqués.
+const avertissements = computed(() => financeData.value?.moisEnCours?.avertissements || []);
+const prixLaitManquant = computed(() => avertissements.value.some(a => a.code === 'PRIX_LAIT_MANQUANT'));
 
 const newTransaction = () => {
   showChargeModal.value = true;
@@ -98,12 +98,11 @@ const openPriceModal = () => {
       Chargement du module financier...
     </div>
     
-    <div v-else-if="missingPriceError" class="error-state">
+    <div v-else-if="loadError" class="error-state">
       <div class="error-card">
-        <h3>Configuration requise</h3>
-        <p>Impossible de calculer le chiffre d'affaires et la rentabilité.</p>
-        <p>Veuillez configurer un <strong>prix de vente du lait</strong> pour la période en cours.</p>
-        <button class="btn-primary mt-4" @click="openPriceModal">Configurer le prix du lait</button>
+        <h3>Données financières indisponibles</h3>
+        <p>{{ loadError }}</p>
+        <button class="btn-primary mt-4" @click="loadData()">Réessayer</button>
       </div>
     </div>
 
@@ -115,22 +114,31 @@ const openPriceModal = () => {
         <span>Actualisation des données...</span>
       </div>
       
+      <!-- Données manquantes : chaque valeur non calculable est expliquée -->
+      <section v-if="avertissements.length" class="section warnings" role="status">
+        <p class="warnings-title">Certaines valeurs ne peuvent pas être calculées :</p>
+        <ul>
+          <li v-for="(a, i) in avertissements" :key="a.code + i">{{ a.message }}</li>
+        </ul>
+        <button v-if="prixLaitManquant" class="btn-primary" @click="openPriceModal">Configurer le prix du lait</button>
+      </section>
+
       <!-- Top KPIs -->
       <section class="section">
-        <FinanceKPIs :kpis="financeData.kpis" />
+        <FinanceKPIs :resultat="financeData.moisEnCours" />
       </section>
 
       <!-- Charts (Bar & Pie) -->
       <section class="section">
-        <FinanceCharts 
-          :revenueData="financeData.revenueVsCharges" 
-          :repartitionData="financeData.chargesRepartition" 
+        <FinanceCharts
+          :historique="financeData.historique"
+          :repartition="financeData.chargesRepartition"
         />
       </section>
 
       <!-- Rentability Bar -->
       <section class="section">
-        <FinanceRentabilityBar :rentability="financeData.rentability" />
+        <FinanceRentabilityBar :resultat="financeData.moisEnCours" />
       </section>
 
       <!-- Transactions Table -->
@@ -157,6 +165,24 @@ const openPriceModal = () => {
 </template>
 
 <style scoped>
+.warnings {
+  padding: 16px;
+  border: 1px solid #F59E0B;
+  border-radius: 8px;
+  background: #FFFBEB;
+  color: #78350F;
+}
+
+.warnings-title {
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.warnings ul {
+  margin: 0 0 12px;
+  padding-left: 18px;
+}
+
 .finance-view {
   display: flex;
   flex-direction: column;

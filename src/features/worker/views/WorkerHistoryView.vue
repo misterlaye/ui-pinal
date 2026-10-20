@@ -1,4 +1,5 @@
 <script setup>
+import { apiErrorMessage } from '../../../utils/apiError.js';
 import { ref, onMounted } from 'vue';
 import { PhDrop } from '@phosphor-icons/vue';
 import { getWorkerHomeData } from '../../../services/worker_service.js';
@@ -6,24 +7,23 @@ import { useExploitation } from '../../../composables/useExploitation.js';
 
 const { getActiveExploitation } = useExploitation();
 const historyItems = ref([]);
-const summary = ref({ traites: 0, volume: 0 });
+const summary = ref({ traites: 0, volume: 0, seance: 'MATIN' });
 const loading = ref(true);
+const loadError = ref('');
 
 onMounted(async () => {
-  const exploitationId = getActiveExploitation();
-  if (exploitationId) {
-    try {
-      const data = await getWorkerHomeData(exploitationId);
-      historyItems.value = data.recentActivities;
-      summary.value = {
-        traites: data.traitesDuMatin, // Simplification
-        volume: data.volumeCollecteMatin
-      };
-    } catch (err) {
-      console.error(err);
-    } finally {
-      loading.value = false;
-    }
+  try {
+    const data = await getWorkerHomeData(getActiveExploitation());
+    historyItems.value = data.recentActivities;
+    summary.value = {
+      traites: data.traitesSeance,
+      volume: data.volumeSeance,
+      seance: data.seance
+    };
+  } catch (err) {
+    loadError.value = apiErrorMessage(err, "Impossible de charger l'historique.");
+  } finally {
+    loading.value = false;
   }
 });
 </script>
@@ -34,13 +34,15 @@ onMounted(async () => {
     <header class="page-header">
       <div class="tag tag-outline">JOURNAL</div>
       <h1 class="page-title">Historique</h1>
-      <p class="page-subtitle">Vos saisies d'aujourd'hui</p>
+      <p class="page-subtitle">Séance en cours et dernières traites enregistrées sur l'exploitation</p>
     </header>
 
+    <p v-if="loadError" class="load-error" role="alert">{{ loadError }}</p>
+
     <!-- Big Summary Banner -->
-    <div class="summary-banner" v-if="!loading">
+    <div class="summary-banner" v-if="!loading && !loadError">
       <div class="summary-left">
-        <span class="summary-label">TRAITES</span>
+        <span class="summary-label">TRAITES ({{ summary.seance === 'SOIR' ? 'SOIR' : 'MATIN' }})</span>
         <span class="summary-val">{{ summary.traites }}</span>
       </div>
       <div class="summary-right">
@@ -76,6 +78,14 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.load-error {
+  margin: 0 16px;
+  padding: 12px;
+  border: 2px solid #B91C1C;
+  background: #FEF2F2;
+  color: #7F1D1D;
+}
+
 .worker-history-view {
   padding: 24px 20px;
   display: flex;
